@@ -556,10 +556,10 @@ const Sidebar: React.FC<Props> = ({
                         onClearAllHistory();
                     }}
                     disabled={sessions.length === 0}
-                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium transition-all duration-200 ${
                         sessions.length === 0 
-                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed bg-transparent' 
-                        : 'text-red-600 hover:text-red-700 bg-red-50 dark:bg-red-900/10 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20'
+                        ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                        : 'text-red-600 hover:text-red-700 dark:text-red-400'
                     }`}
                  >
                     <TrashIcon className="w-3.5 h-3.5" />
