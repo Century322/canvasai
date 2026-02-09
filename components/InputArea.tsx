@@ -111,6 +111,13 @@ const InputArea: React.FC<Props> = ({
       e.preventDefault();
       setFocusedSide(side);
       
+      // 停止录音
+      if (isRecording || isRecordingRight) {
+          recognitionRef.current?.stop();
+          setIsRecording(false);
+          setIsRecordingRight(false);
+      }
+      
       const isUnified = !isSplitInput || !isSplitScreen;
 
       if (isUnified) {
@@ -137,6 +144,13 @@ const InputArea: React.FC<Props> = ({
   };
 
   const handleCenterSend = () => {
+      // 停止录音
+      if (isRecording || isRecordingRight) {
+          recognitionRef.current?.stop();
+          setIsRecording(false);
+          setIsRecordingRight(false);
+      }
+      
       if (isLeftLoading || isRightLoading) return;
 
       if (text.trim() || attachments.length > 0) {
@@ -400,6 +414,12 @@ const InputArea: React.FC<Props> = ({
        return (
             <button 
                 onClick={() => {
+                     // 停止录音
+                     if (isRecording || isRecordingRight) {
+                         recognitionRef.current?.stop();
+                         setIsRecording(false);
+                         setIsRecordingRight(false);
+                     }
                      onSendMessage(text, attachments, 'both');
                      setText(''); setAttachments([]);
                 }}

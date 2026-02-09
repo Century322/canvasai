@@ -291,7 +291,7 @@ const Sidebar: React.FC<Props> = ({
                                             {new Date(session.timestamp).toLocaleString(undefined, {month:'numeric', day:'numeric', hour:'numeric', minute:'numeric'})}
                                         </div>
                                     </div>
-                                    <div className="absolute right-2 top-3 opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-all z-10 bg-white dark:bg-[#212121] rounded-lg shadow-sm border border-gray-100 dark:border-[#333]">
+                                    <div className="absolute right-2 top-3 flex items-center gap-1 transition-all z-10 bg-white dark:bg-[#212121] rounded-lg shadow-sm border border-gray-100 dark:border-[#333] md:opacity-0 md:group-hover:opacity-100 opacity-100">
                                         <button 
                                             type="button"
                                             onClick={(e) => handleExportMarkdown(e, session)}
