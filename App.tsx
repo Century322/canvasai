@@ -94,43 +94,44 @@ export default function App() {
 
   // --- Initialization Effects ---
 
-  // Get effective theme based on system preference
-  const getEffectiveTheme = useCallback(() => {
-    if (theme === 'system') {
+  // 计算实际主题（system -> light/dark）
+  const getEffectiveThemeValue = (currentTheme: 'light' | 'dark' | 'system') => {
+    if (currentTheme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    return theme;
-  }, [theme]);
+    return currentTheme;
+  };
 
-  // 标记是否已经初始化主题
-  const hasThemeInitialized = useRef(false);
+  // 应用主题到 DOM
+  const applyTheme = (currentTheme: 'light' | 'dark' | 'system') => {
+    const effectiveTheme = getEffectiveThemeValue(currentTheme);
+    if (effectiveTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
+  // 初始化：从 localStorage 读取主题
   useEffect(() => {
     const savedTheme = localStorage.getItem('gemini_theme') as 'light' | 'dark' | 'system' | null;
     if (savedTheme) {
       setTheme(savedTheme);
     }
-    hasThemeInitialized.current = true;
   }, []);
 
+  // 主题变化时应用并保存
   useEffect(() => {
-    const effectiveTheme = getEffectiveTheme();
-    if (effectiveTheme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-    // 只在主题明确改变时保存（排除初始挂载）
-    if (hasThemeInitialized.current) {
-      localStorage.setItem('gemini_theme', theme);
-    }
-  }, [theme, getEffectiveTheme]);
+    applyTheme(theme);
+    localStorage.setItem('gemini_theme', theme);
+  }, [theme]);
 
-  // Listen for system theme changes
+  // 监听系统主题变化（仅在 system 模式下）
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
       if (theme === 'system') {
-        const effectiveTheme = mediaQuery.matches ? 'dark' : 'light';
-        if (effectiveTheme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
+        applyTheme('system');
       }
     };
     mediaQuery.addEventListener('change', handleChange);
