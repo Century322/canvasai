@@ -1,0 +1,8 @@
+{
+  "name": "Canvas",
+  "description": "一个移动端优先的自适应 AI 聊天界面，支持文本、音频、图片和视频生成，集成多个 Gemini 模型并支持上下文保留。",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
