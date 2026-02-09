@@ -330,27 +330,27 @@ const MessageItemRaw: React.FC<{
             </div>
         ) : (
             <div className={`w-full max-w-full overflow-hidden ${isMirrored ? 'text-right' : 'text-left'}`}>
-                
+
                 {thinkContent && (
                     <ThinkingProcess content={thinkContent} isFinished={isThinkingFinished} />
                 )}
 
                 {mainContent && (
-                    <div className="markdown-body text-gray-800 dark:text-gray-200">
-                        <ReactMarkdown 
-                            remarkPlugins={[remarkGfm, remarkMath]} 
+                    <div className="markdown-body bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[15px] leading-relaxed">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeKatex, rehypeHighlight]}
                             components={{
                                 code({node, inline, className, children, ...props}: any) {
                                     const match = /language-(\w+)/.exec(className || '');
                                     const codeText = String(children).replace(/\n$/, '');
                                     const language = match ? match[1] : '';
-                                    
+
                                     if (!inline && match) {
                                         return (
-                                            <div 
+                                            <div
                                                     className="relative group/code my-2 text-left max-w-full"
-                                                    onClick={(e) => e.stopPropagation()} 
+                                                    onClick={(e) => e.stopPropagation()}
                                             >
                                                 <div className="flex items-center justify-between px-3 py-1.5 bg-[#2d2d2d] rounded-t-md border-b border-[#404040]">
                                                         <div className="flex items-center gap-2">
@@ -511,10 +511,10 @@ const ChatInterface: React.FC<Props> = ({
 
   // Auto-scroll logic with Virtuoso
   useEffect(() => {
-      if (isAtBottom) {
+      if (isAtBottom && messages.length > 0) {
           virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' });
       }
-  }, [messages.length, messages[messages.length - 1]?.content, isLoading]); 
+  }, [messages.length, messages[messages.length - 1]?.content, isLoading, isAtBottom]); 
 
   // Empty State
   if (messages.length === 0) {
@@ -573,8 +573,11 @@ const ChatInterface: React.FC<Props> = ({
         {/* Floating Scroll Down Button */}
         {showScrollButton && (
             <div className="absolute bottom-6 right-6 z-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <button 
-                    onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' })}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' });
+                    }}
                     className="p-2.5 rounded-full bg-white dark:bg-[#333] shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#404040] transition-colors"
                 >
                     <ArrowDownIcon className="w-5 h-5" />
