@@ -92,51 +92,33 @@ export default function App() {
   };
   const dismissToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
-  // --- Initialization Effects ---
-
-  // 计算实际主题（system -> light/dark）
-  const getEffectiveThemeValue = (currentTheme: 'light' | 'dark' | 'system') => {
-    if (currentTheme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return currentTheme;
-  };
-
-  // 应用主题到 DOM
-  const applyTheme = (currentTheme: 'light' | 'dark' | 'system') => {
-    const effectiveTheme = getEffectiveThemeValue(currentTheme);
-    if (effectiveTheme === 'dark') {
+  // --- Theme Management (完全跟随系统) ---
+  
+  // 应用系统主题到 DOM
+  const applySystemTheme = () => {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    setTheme(isDark ? 'dark' : 'light');
   };
 
-  // 初始化：从 localStorage 读取主题
+  // 初始化：应用系统主题
   useEffect(() => {
-    const savedTheme = localStorage.getItem('gemini_theme') as 'light' | 'dark' | 'system' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
+    applySystemTheme();
   }, []);
 
-  // 主题变化时应用并保存
-  useEffect(() => {
-    applyTheme(theme);
-    localStorage.setItem('gemini_theme', theme);
-  }, [theme]);
-
-  // 监听系统主题变化（仅在 system 模式下）
+  // 监听系统主题变化
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = () => {
-      if (theme === 'system') {
-        applyTheme('system');
-      }
+      applySystemTheme();
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, []);
 
   // Load Data - 只加载历史记录列表
   useEffect(() => {
@@ -1150,7 +1132,6 @@ export default function App() {
         isIncognito={isIncognito}
         onToggleIncognito={() => setIsIncognito(!isIncognito)}
         theme={theme}
-        onSetTheme={setTheme}
       />
     </div>
   );

@@ -558,11 +558,8 @@ const ChatInterface: React.FC<Props> = ({
             components={{
                 Footer: () => (
                     isLoading ? (
-                        <div className={`flex w-full mb-6 px-4 ${isMirrored ? 'justify-end pl-10 flex-row-reverse' : 'justify-start pr-10'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-white dark:bg-[#2f2f2f] border border-gray-200 dark:border-gray-700 ${isMirrored ? 'ml-4' : 'mr-4'}`}>
-                                <BotIcon className="w-5 h-5 text-gray-400 animate-pulse" />
-                            </div>
-                            <div className="flex items-center gap-1 mt-3">
+                        <div className={`flex w-full mb-6 px-4 ${isMirrored ? 'justify-end pl-10' : 'justify-start pr-10'}`}>
+                            <div className={`flex items-center gap-1 mt-3 ${isMirrored ? 'mr-12' : 'ml-12'}`}>
                                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>

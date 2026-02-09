@@ -24,8 +24,7 @@ interface Props {
   targetSectionTrigger?: { section: string, timestamp: number } | null;
   isIncognito: boolean;
   onToggleIncognito: () => void;
-  theme: 'light' | 'dark' | 'system';
-  onSetTheme: (theme: 'light' | 'dark' | 'system') => void;
+  theme: 'light' | 'dark';
   isSplitScreen?: boolean;
   leftSystemInstruction?: string;
   rightSystemInstruction?: string;
@@ -92,7 +91,6 @@ const RightSidebar: React.FC<Props> = ({
   isIncognito,
   onToggleIncognito,
   theme,
-  onSetTheme,
   isSplitScreen,
   leftSystemInstruction,
   rightSystemInstruction,
@@ -509,34 +507,14 @@ const RightSidebar: React.FC<Props> = ({
                     </div>
 
                     <div className="p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]">
-                        <div className="flex items-center gap-2 mb-2">
-                            {theme === 'system' ? <ComputerIcon className="w-4 h-4 text-blue-500" /> : theme === 'light' ? <SunIcon className="w-4 h-4 text-amber-500" /> : <MoonIcon className="w-4 h-4 text-gray-500" />}
+                        <div className="flex items-center gap-2">
+                            {theme === 'light' ? <SunIcon className="w-4 h-4 text-amber-500" /> : <MoonIcon className="w-4 h-4 text-gray-500" />}
                             <div className="flex flex-col">
                                 <span className="text-xs font-medium text-gray-700 dark:text-gray-200">界面主题</span>
                                 <span className="text-[9px] text-gray-400">
-                                    {theme === 'system' ? '跟随系统' : theme === 'light' ? '当前：浅色模式' : '当前：深色模式'}
+                                    跟随系统 (切换系统，切换主题)
                                 </span>
                             </div>
-                        </div>
-                        <div className="flex gap-1">
-                            <button
-                                onClick={() => onSetTheme('light')}
-                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${theme === 'light' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                            >
-                                浅色
-                            </button>
-                            <button
-                                onClick={() => onSetTheme('dark')}
-                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${theme === 'dark' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                            >
-                                深色
-                            </button>
-                            <button
-                                onClick={() => onSetTheme('system')}
-                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${theme === 'system' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                            >
-                                跟随系统
-                            </button>
                         </div>
                     </div>
 
@@ -558,16 +536,20 @@ const RightSidebar: React.FC<Props> = ({
                         
                         <button 
                             onClick={async () => {
-                                if (window.confirm("确定要清空所有本地数据吗？这将删除所有对话记录和图片缓存，无法恢复。API Key 不会被删除。")) {
-                                    await DB.clearAllSessions();
-                                    alert("数据已清空，请刷新页面。");
-                                    window.location.reload();
+                                if (window.confirm("确定要清空所有聊天记录吗？这将删除所有对话记录、图片缓存和自动保存数据，无法恢复。\n\n保留的数据：\n- API Key\n- 主题设置\n- 模型选择\n- 生成参数\n- 知识库文档\n- 自定义角色")) {
+                                    try {
+                                        await DB.clearAllSessions();
+                                        alert("所有聊天记录已清空，页面将刷新。");
+                                        window.location.reload();
+                                    } catch (e) {
+                                        alert("清空失败，请重试。");
+                                    }
                                 }
                             }}
                             className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 text-xs font-medium border border-red-100 dark:border-red-900/30 transition-colors"
                         >
                             <TrashIcon className="w-3.5 h-3.5" />
-                            清空所有聊天记录 (保留 Key)
+                            清空所有聊天记录
                         </button>
                         
                         <p className="text-[9px] text-gray-400 leading-relaxed text-center mt-2">

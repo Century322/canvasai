@@ -92,16 +92,26 @@ export const DB = {
 
     async clearAllSessions(): Promise<void> {
         try {
+            // 清除 IndexedDB
             const db = await openDB();
-            return new Promise((resolve, reject) => {
+            await new Promise<void>((resolve, reject) => {
                 const transaction = db.transaction(STORE_NAME, 'readwrite');
                 const store = transaction.objectStore(STORE_NAME);
                 const request = store.clear();
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
+            
+            // 清除 localStorage 中的自动保存数据
+            localStorage.removeItem('gemini_auto_save');
+            
+            // 清除其他对话相关数据（保留设置类数据）
+            // 保留：gemini_stored_keys (API Key), gemini_theme (主题), gemini_model_id (模型选择)
+            // 保留：gemini_right_model_id, gemini_gen_config, gemini_custom_prompts
+            localStorage.removeItem('gemini_current_session_id');
         } catch (e) {
             console.error("DB Clear Error", e);
+            throw e;
         }
     }
 };
