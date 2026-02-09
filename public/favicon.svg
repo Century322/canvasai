@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 黑色圆角背景 -->
+  <rect x="5" y="5" width="90" height="90" rx="20" ry="20" fill="#18181b"/>
+  <!-- 白色字母 C -->
+  <text x="50" y="68" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="55" font-weight="600" fill="white" text-anchor="middle">C</text>
+</svg>

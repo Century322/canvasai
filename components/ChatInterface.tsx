@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
+import DOMPurify from 'dompurify';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'; // Virtualization
 import { Message, MessageRole, ContentType } from '../types';
 import { BotIcon, UserIcon, CheckIcon, CopyIcon, RefreshIcon, EditIcon, SpeakerIcon, CodeIcon, StarIcon, EyeIcon, MobiusIcon, AlertTriangleIcon, BrainIcon, ChevronDownIcon, ChevronUpIcon, ArrowCollapseIcon, ArrowDownIcon, GlobeIcon, SearchIcon } from './Icons';
@@ -43,7 +44,7 @@ const CodeArtifact = ({ code, language }: { code: string, language: string }) =>
                     onClick={(e) => e.stopPropagation()} 
                 >
                     {language === 'html' || language === 'svg' ? (
-                        <div dangerouslySetInnerHTML={{ __html: code }} />
+                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(code) }} />
                     ) : null}
                 </div>
             )}
@@ -284,6 +285,10 @@ const MessageItemRaw: React.FC<{
                         </button>
                     </div>
                 )}
+                {/* Timestamp for user message */}
+                <div className={`text-[10px] text-gray-400 mt-1 ${isMirrored ? 'text-left' : 'text-right'}`}>
+                    {new Date(message.timestamp).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})}
+                </div>
             </div>
         </div>
       );
@@ -459,6 +464,11 @@ const MessageItemRaw: React.FC<{
                         <RefreshIcon className="w-4 h-4" />
                     </button>
                 )}
+                
+                {/* Timestamp */}
+                <span className="text-[10px] text-gray-400 ml-2">
+                    {new Date(message.timestamp).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})}
+                </span>
             </div>
         )}
       </div>

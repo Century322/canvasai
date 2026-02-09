@@ -5,7 +5,7 @@ import {
     NewChatIcon, TrashIcon, BookIcon, BotIcon, 
     FileTextIcon, UploadIcon,
     ChevronLeftIcon, ChevronRightIcon,
-    XIcon, PlusIcon, MobiusIcon, DownloadIcon
+    XIcon, PlusIcon, MobiusIcon, DownloadIcon, EditIcon, SplitScreenIcon
 } from './Icons';
 
 interface Props {
@@ -17,22 +17,31 @@ interface Props {
   onSwitchSession: (id: string) => void;
   onDeleteSession: (e: React.MouseEvent, id: string) => void;
   onClearAllHistory: () => void;
+  isNewChatDisabled?: boolean; // 当当前已经是空的新会话时禁用
   
   // Knowledge Base Props
   knowledgeFiles: KnowledgeFile[];
   onUploadKnowledge: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeleteKnowledge: (id: string) => void;
   onToggleKnowledge: (id: string) => void;
+  onToggleKnowledgeSide?: (id: string, side: 'left' | 'right') => void; // Toggle knowledge for left/right side
 
   // Agent Props
   customPrompts: PromptPreset[];
+  isSplitScreen?: boolean; // Whether in split screen mode
   onSelectPreset: (content: string) => void;
   onAddCustomPrompt: (preset: PromptPreset) => void; // Moved from RightSidebar
   onDeleteCustomPrompt: (id: string) => void; // Moved from RightSidebar
+  onEditCustomPrompt?: (preset: PromptPreset) => void; // Edit custom prompt
+  onTogglePrompt?: (id: string) => void; // Toggle prompt active state
+  onTogglePromptSide?: (id: string, side: 'left' | 'right') => void; // Toggle prompt for left/right side
 
   // Gallery Props (derived from all sessions) - Kept in interface to match App.tsx but unused
   allMessages: Message[];
   onJumpToMessage: (sessionId: string, messageId: string) => void;
+  
+  // Full width change callback
+  onFullWidthChange?: (isFullWidth: boolean) => void;
 }
 
 const Sidebar: React.FC<Props> = ({
@@ -44,20 +53,29 @@ const Sidebar: React.FC<Props> = ({
   onSwitchSession,
   onDeleteSession,
   onClearAllHistory,
+  isNewChatDisabled,
   knowledgeFiles,
   onUploadKnowledge,
   onDeleteKnowledge,
   onToggleKnowledge,
+  onToggleKnowledgeSide,
   customPrompts,
+  isSplitScreen,
   onSelectPreset,
   onAddCustomPrompt,
-  onDeleteCustomPrompt
+  onDeleteCustomPrompt,
+  onEditCustomPrompt,
+  onTogglePrompt,
+  onTogglePromptSide,
+  onFullWidthChange
 }) => {
   const [currentView, setCurrentView] = useState<number>(0);
   const [isFullWidth, setIsFullWidth] = useState(false);
   
   // Custom Role Modal State
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<PromptPreset | null>(null);
   const [newPromptName, setNewPromptName] = useState('');
   const [newPromptDesc, setNewPromptDesc] = useState('');
   const [newPromptContent, setNewPromptContent] = useState('');
@@ -65,8 +83,8 @@ const Sidebar: React.FC<Props> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const TOTAL_VIEWS = 3; // Reduced views
 
-  // Filter sessions to only show those with messages
-  const visibleSessions = sessions.filter(s => s.messages.length > 0);
+  // Show all sessions (they are kept in memory after creation)
+  const visibleSessions = sessions;
 
   const handlePrevView = () => {
       setCurrentView(prev => Math.max(0, prev - 1));
@@ -91,12 +109,48 @@ const Sidebar: React.FC<Props> = ({
           id: crypto.randomUUID(),
           name: newPromptName,
           description: newPromptDesc || '暂无描述',
-          content: newPromptContent
+          content: newPromptContent,
+          isActive: true,
+          leftEnabled: false,
+          rightEnabled: false
       });
       setNewPromptName('');
       setNewPromptDesc('');
       setNewPromptContent('');
       setIsCreatorOpen(false);
+  };
+
+  const handleEditRole = (prompt: PromptPreset) => {
+      setEditingPrompt(prompt);
+      setNewPromptName(prompt.name);
+      setNewPromptDesc(prompt.description);
+      setNewPromptContent(prompt.content);
+      setIsEditorOpen(true);
+  };
+
+  const handleUpdateRole = () => {
+      if (!editingPrompt || !newPromptName || !newPromptContent) return;
+      if (onEditCustomPrompt) {
+          onEditCustomPrompt({
+              ...editingPrompt,
+              name: newPromptName,
+              description: newPromptDesc || '暂无描述',
+              content: newPromptContent
+          });
+      }
+      setNewPromptName('');
+      setNewPromptDesc('');
+      setNewPromptContent('');
+      setEditingPrompt(null);
+      setIsEditorOpen(false);
+  };
+
+  const handleCloseEditor = () => {
+      setNewPromptName('');
+      setNewPromptDesc('');
+      setNewPromptContent('');
+      setEditingPrompt(null);
+      setIsEditorOpen(false);
   };
 
   const handleExportMarkdown = (e: React.MouseEvent, session: ChatSession) => {
@@ -122,7 +176,7 @@ const Sidebar: React.FC<Props> = ({
 
   // Dynamic grid classes based on expansion state
   const gridClass = isFullWidth 
-    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' 
+    ? 'grid-cols-2 lg:grid-cols-3 gap-3' 
     : 'grid-cols-1 gap-2';
 
   return (
@@ -132,15 +186,19 @@ const Sidebar: React.FC<Props> = ({
         className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 md:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
+      
+      {/* Backdrop for full width sidebar on PC */}
+      <div 
+        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity duration-300 hidden md:block ${isOpen && isFullWidth ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+      />
 
-      <div className={`fixed top-0 left-0 h-full ${widthClass} bg-[#f9f9f9] dark:bg-[#171717] border-r border-gray-200 dark:border-[#2f2f2f] z-50 transform transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl md:shadow-xl`}>
+      <div className={`fixed top-0 left-0 h-full ${widthClass} bg-white dark:bg-[#212121] border-r border-gray-200 dark:border-[#2f2f2f] z-50 transform transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl md:shadow-xl`}>
         
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#1a1a1a] flex-shrink-0 flex items-center justify-between">
+        <div className="p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121] flex-shrink-0 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-                 <div className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2 flex-shrink-0">
-                    {/* Changed from text-blue-500 to text-gray-600 */}
-                    <MobiusIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                 <div className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight flex-shrink-0">
                     Canvas
                  </div>
                  
@@ -154,8 +212,14 @@ const Sidebar: React.FC<Props> = ({
             </div>
 
             <button 
-                onClick={() => setIsFullWidth(!isFullWidth)}
-                className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0"
+                onClick={() => {
+                    const newFullWidth = !isFullWidth;
+                    setIsFullWidth(newFullWidth);
+                    if (onFullWidthChange) {
+                        onFullWidthChange(newFullWidth);
+                    }
+                }}
+                className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors shrink-0"
                 title={isFullWidth ? "收缩侧边栏" : "展开侧边栏"}
             >
                 {isFullWidth ? <ChevronLeftIcon className="w-5 h-5" /> : <ChevronRightIcon className="w-5 h-5" />}
@@ -163,7 +227,7 @@ const Sidebar: React.FC<Props> = ({
         </div>
 
         {/* Dynamic Content Area with Animation */}
-        <div className={`flex-1 overflow-hidden bg-[#f9f9f9] dark:bg-[#171717] flex flex-col`}>
+        <div className={`flex-1 overflow-hidden bg-white dark:bg-[#212121] flex flex-col`}>
             <div 
                 key={currentView} 
                 className="animate-in fade-in slide-in-from-right-4 duration-300 ease-out h-full flex flex-col overflow-hidden"
@@ -174,13 +238,24 @@ const Sidebar: React.FC<Props> = ({
                         <button 
                             type="button"
                             onClick={() => {
-                                onNewChat();
-                                if (window.innerWidth < 768) onClose();
+                                if (!isNewChatDisabled) {
+                                    onNewChat();
+                                    if (window.innerWidth < 768) onClose();
+                                }
                             }}
-                            className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:border-gray-300 dark:hover:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 transition-all border border-gray-200 dark:border-[#333] shadow-sm group"
+                            disabled={isNewChatDisabled}
+                            className={`w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all group ${
+                                isNewChatDisabled 
+                                    ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                                    : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
+                            }`}
                         >
-                            <NewChatIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                            <span>开启新对话</span>
+                            <NewChatIcon className={`w-4 h-4 transition-colors ${
+                                isNewChatDisabled 
+                                    ? 'text-gray-300 dark:text-gray-600' 
+                                    : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-200'
+                            }`} />
+                            <span>{isNewChatDisabled ? '当前已是新对话' : '开启新对话'}</span>
                         </button>
 
                         {visibleSessions.length === 0 ? (
@@ -205,8 +280,12 @@ const Sidebar: React.FC<Props> = ({
                                         }`}
                                 >
                                     <div className="flex-1 min-w-0 pr-2">
-                                        <div className={`text-sm font-medium truncate mb-1 ${currentSessionId === session.id ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                        <div className={`text-sm font-medium truncate mb-0.5 ${currentSessionId === session.id ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                                             {session.title}
+                                            {/* Show split screen indicator if has right messages */}
+                                            {session.rightMessages && session.rightMessages.length > 0 && (
+                                                <SplitScreenIcon className="inline-block w-3 h-3 ml-1.5 text-orange-500" />
+                                            )}
                                         </div>
                                         <div className="text-[10px] text-gray-400 font-mono">
                                             {new Date(session.timestamp).toLocaleString(undefined, {month:'numeric', day:'numeric', hour:'numeric', minute:'numeric'})}
@@ -247,9 +326,9 @@ const Sidebar: React.FC<Props> = ({
                           {/* Updated Upload Button to match New Chat style */}
                           <button 
                               onClick={() => fileInputRef.current?.click()}
-                              className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:border-gray-300 dark:hover:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 transition-all border border-gray-200 dark:border-[#333] shadow-sm group"
+                              className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-400 dark:text-gray-500 transition-all group hover:text-gray-700 dark:hover:text-gray-200"
                           >
-                              <UploadIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                              <UploadIcon className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-200 transition-colors" />
                               <span>上传文档</span>
                           </button>
                           
@@ -270,28 +349,75 @@ const Sidebar: React.FC<Props> = ({
                                       <span className="text-[10px] text-gray-300 mt-1 text-center px-4">支持 .txt, .md, .json (RAG Lite)</span>
                                   </div>
                               ) : (
-                                  knowledgeFiles.map(file => (
-                                      <div key={file.id} className="p-3 bg-white dark:bg-[#212121] border border-gray-100 dark:border-[#333] rounded-xl shadow-sm hover:shadow-md transition-shadow group h-fit">
+                                  knowledgeFiles.map(file => {
+                                      // 分屏模式下根据左右启用状态判断是否高亮，单窗口模式根据isActive
+                                      const isHighlighted = isSplitScreen 
+                                          ? (file.leftEnabled || file.rightEnabled)
+                                          : file.isActive;
+                                      return (
+                                      <div key={file.id} className={`p-3 bg-white dark:bg-[#212121] border rounded-xl shadow-sm transition-all h-fit ${isHighlighted ? 'border-gray-100 dark:border-[#333]' : 'border-gray-200 dark:border-[#2a2a2a] opacity-70'}`}>
                                           <div className="flex items-start justify-between mb-3">
                                               <div className="flex items-center gap-2 overflow-hidden">
-                                                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                                                      <FileTextIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                                  <div 
+                                                      onClick={() => !isSplitScreen && onToggleKnowledge(file.id)}
+                                                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform hover:scale-110 ${isHighlighted ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'} ${!isSplitScreen ? 'cursor-pointer' : ''}`}
+                                                  >
+                                                      <FileTextIcon className={`w-4 h-4 ${isHighlighted ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} />
                                                   </div>
-                                                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate" title={file.name}>{file.name}</span>
+                                                  <span 
+                                                      onClick={() => !isSplitScreen && onToggleKnowledge(file.id)}
+                                                      className={`text-sm font-medium truncate ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-600'}`} 
+                                                      title={file.name}
+                                                  >{file.name}</span>
                                               </div>
                                               <button onClick={(e) => { e.stopPropagation(); onDeleteKnowledge(file.id); }} className="text-gray-300 hover:text-red-500 transition-colors"><XIcon className="w-3.5 h-3.5" /></button>
                                           </div>
-                                          <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-800 pt-2 mt-1">
-                                              <span className="text-[10px] text-gray-400 font-mono">{(file.size / 1024).toFixed(1)} KB</span>
-                                              <button 
-                                                  onClick={() => onToggleKnowledge(file.id)}
-                                                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${file.isActive ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-100'}`}
-                                              >
-                                                  {file.isActive ? '已启用' : '未启用'}
-                                              </button>
+                                          {/* Toggle Section - Different UI for split screen vs single window */}
+                                          <div className="border-t border-gray-50 dark:border-gray-800 pt-2 mt-1">
+                                              {!isSplitScreen ? (
+                                                  /* Single Window Mode: Simple on/off toggle */
+                                                  <div className="flex gap-1">
+                                                      <button
+                                                          onClick={(e) => { e.stopPropagation(); onToggleKnowledge(file.id); }}
+                                                          className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${file.isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                      >
+                                                          启用
+                                                      </button>
+                                                      <button
+                                                          onClick={(e) => { e.stopPropagation(); onToggleKnowledge(file.id); }}
+                                                          className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${!file.isActive ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                      >
+                                                          关闭
+                                                      </button>
+                                                  </div>
+                                              ) : (
+                                                  /* Split Screen Mode: Left/Right toggles */
+                                                  <div className="flex items-center gap-2">
+                                                      <span className="text-[10px] text-gray-400 flex-shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
+                                                      <div className="flex gap-2 flex-1">
+                                                          <button
+                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide && onToggleKnowledgeSide(file.id, 'left'); }}
+                                                              className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.leftEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                              title="左侧/上方启用"
+                                                          >
+                                                              <span className="hidden md:inline">左</span>
+                                                              <span className="md:hidden">上</span>
+                                                          </button>
+                                                          <button
+                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide && onToggleKnowledgeSide(file.id, 'right'); }}
+                                                              className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.rightEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                              title="右侧/下方启用"
+                                                          >
+                                                              <span className="hidden md:inline">右</span>
+                                                              <span className="md:hidden">下</span>
+                                                          </button>
+                                                      </div>
+                                                  </div>
+                                              )}
                                           </div>
                                       </div>
-                                  ))
+                                      );
+                                  })
                               )}
                           </div>
                       </div>
@@ -303,9 +429,9 @@ const Sidebar: React.FC<Props> = ({
                           {/* Create Role Button - Opens Internal Modal */}
                           <button 
                               onClick={() => setIsCreatorOpen(true)}
-                              className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:border-gray-300 dark:hover:border-gray-600 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 transition-all border border-gray-200 dark:border-[#333] shadow-sm group"
+                              className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-400 dark:text-gray-500 transition-all group hover:text-gray-700 dark:hover:text-gray-200"
                           >
-                              <PlusIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                              <PlusIcon className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-200 transition-colors" />
                               <span>新建角色</span>
                           </button>
 
@@ -316,34 +442,102 @@ const Sidebar: React.FC<Props> = ({
                                        <span className="text-xs">暂无自定义角色</span>
                                    </div>
                                )}
-                               {customPrompts.map(prompt => (
+                               {customPrompts.map(prompt => {
+                                   // 分屏模式下根据左右启用状态判断是否高亮，单窗口模式根据isActive
+                                   const isHighlighted = isSplitScreen 
+                                       ? (prompt.leftEnabled || prompt.rightEnabled)
+                                       : prompt.isActive !== false;
+                                   return (
                                    <div 
                                        key={prompt.id} 
-                                       onClick={() => {
-                                           onSelectPreset(prompt.content);
-                                           onNewChat();
-                                           if (window.innerWidth < 768) onClose();
-                                       }}
-                                       className="relative flex flex-col p-4 bg-white dark:bg-[#212121] border border-gray-100 dark:border-[#333] rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 cursor-pointer transition-all group"
+                                       className={`relative flex flex-col p-4 bg-white dark:bg-[#212121] border rounded-xl shadow-sm transition-all ${isHighlighted ? 'border-gray-100 dark:border-[#333]' : 'border-gray-200 dark:border-[#2a2a2a] opacity-60'}`}
                                    >
+                                       {/* Header with Icon, Name, and Actions */}
                                        <div className="flex items-center gap-3 mb-2">
-                                           <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                           <div 
+                                               onClick={() => !isSplitScreen && onTogglePrompt(prompt.id)}
+                                               className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${!isSplitScreen ? 'cursor-pointer hover:scale-110' : ''} ${isHighlighted ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}
+                                           >
                                                 <BotIcon className="w-4 h-4" />
                                            </div>
-                                           <span className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate flex-1">{prompt.name}</span>
+                                           <span 
+                                               onClick={() => !isSplitScreen && onTogglePrompt(prompt.id)}
+                                               className={`text-sm font-bold truncate flex-1 ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-gray-600'}`}
+                                           >{prompt.name}</span>
+                                           
+                                           {/* Action Buttons - Always visible */}
+                                           <div className="flex items-center gap-1">
+                                               <button 
+                                                    onClick={(e) => { e.stopPropagation(); handleEditRole(prompt); }}
+                                                    className="p-1.5 text-gray-400 hover:text-blue-500 transition-all rounded-md"
+                                                    title="编辑角色"
+                                               >
+                                                   <EditIcon className="w-3.5 h-3.5" />
+                                               </button>
+                                               <button 
+                                                    onClick={(e) => { e.stopPropagation(); onDeleteCustomPrompt(prompt.id); }}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 transition-all rounded-md"
+                                                    title="删除角色"
+                                               >
+                                                   <TrashIcon className="w-3.5 h-3.5" />
+                                               </button>
+                                           </div>
                                        </div>
-                                       <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed mb-1 pr-6">
+                                       
+                                       {/* Description */}
+                                       <p 
+                                           onClick={() => !isSplitScreen && onTogglePrompt(prompt.id)}
+                                           className={`text-xs line-clamp-3 leading-relaxed mb-2 pr-6 ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
+                                       >
                                            {prompt.description}
                                        </p>
-                                       <button 
-                                            onClick={(e) => { e.stopPropagation(); onDeleteCustomPrompt(prompt.id); }}
-                                            className="absolute top-2 right-2 p-1.5 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all rounded-md"
-                                            title="删除角色"
-                                       >
-                                           <TrashIcon className="w-3.5 h-3.5" />
-                                       </button>
+                                       
+                                       {/* Toggle Section - Different UI for split screen vs single window */}
+                                       <div className="pt-2 border-t border-gray-100 dark:border-[#2a2a2a]">
+                                           {!isSplitScreen ? (
+                                               /* Single Window Mode: Simple on/off toggle */
+                                               <div className="flex gap-1">
+                                                   <button
+                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt(prompt.id); }}
+                                                       className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive !== false ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                   >
+                                                       启用
+                                                   </button>
+                                                   <button
+                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt(prompt.id); }}
+                                                       className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive === false ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                   >
+                                                       关闭
+                                                   </button>
+                                               </div>
+                                           ) : (
+                                               /* Split Screen Mode: Left/Right toggles */
+                                               <div className="flex items-center gap-2">
+                                                   <span className="text-[10px] text-gray-400 flex-shrink-0">应用至:</span>
+                                                   <div className="flex gap-2 flex-1">
+                                                       <button
+                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide(prompt.id, 'left'); }}
+                                                           className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${prompt.leftEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                           title="左侧/上方启用"
+                                                       >
+                                                           <span className="hidden md:inline">左</span>
+                                                           <span className="md:hidden">上</span>
+                                                       </button>
+                                                       <button
+                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide(prompt.id, 'right'); }}
+                                                           className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${prompt.rightEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                           title="右侧/下方启用"
+                                                       >
+                                                           <span className="hidden md:inline">右</span>
+                                                           <span className="md:hidden">下</span>
+                                                       </button>
+                                                   </div>
+                                               </div>
+                                           )}
+                                       </div>
                                    </div>
-                               ))}
+                                   );
+                               })}
                           </div>
                       </div>
                 )}
@@ -351,7 +545,7 @@ const Sidebar: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#1a1a1a] flex flex-col gap-3 flex-shrink-0">
+        <div className="p-4 border-t border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121] flex flex-col gap-3 flex-shrink-0">
              
              {/* Dynamic Top Button in Footer: Clear History only on Page 1 */}
              {currentView === 0 ? (
@@ -372,40 +566,40 @@ const Sidebar: React.FC<Props> = ({
                     清除所有历史
                  </button>
              ) : (
-                 <div className="h-8 w-full flex items-center justify-center text-gray-300 text-[10px] italic">
+                 <div className="h-8 w-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs font-medium">
                      {/* Placeholder or Info text */}
                      {isFullWidth ? "已展开更多列" : "点击右上角展开更多列"}
                  </div> 
              )}
 
              {/* View Switcher Controls */}
-             <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-[#2a2a2a]">
-                 <button 
-                    type="button"
-                    onClick={handlePrevView}
-                    disabled={currentView === 0}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${currentView === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:text-gray-800'}`}
-                 >
-                    <ChevronLeftIcon className="w-3.5 h-3.5" />
-                    上一页
-                 </button>
-                 
-                 <div className="flex gap-1.5">
-                     {Array.from({length: TOTAL_VIEWS}).map((_, i) => (
-                         <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === currentView ? 'bg-gray-600 scale-125' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                     ))}
-                 </div>
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-[#2a2a2a]">
+                <button 
+                   type="button"
+                   onClick={handlePrevView}
+                   disabled={currentView === 0}
+                   className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all ${currentView === 0 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'}`}
+                >
+                   <ChevronLeftIcon className="w-3.5 h-3.5" />
+                   上一页
+                </button>
+                
+                <div className="flex gap-1.5">
+                    {Array.from({length: TOTAL_VIEWS}).map((_, i) => (
+                        <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === currentView ? 'bg-gray-600 dark:bg-gray-400 scale-125' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    ))}
+                </div>
 
-                 <button 
-                    type="button"
-                    onClick={handleNextView}
-                    disabled={currentView === TOTAL_VIEWS - 1}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-all ${currentView === TOTAL_VIEWS - 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] hover:text-gray-800'}`}
-                 >
-                    下一页
-                    <ChevronRightIcon className="w-3.5 h-3.5" />
-                 </button>
-             </div>
+                <button 
+                   type="button"
+                   onClick={handleNextView}
+                   disabled={currentView === TOTAL_VIEWS - 1}
+                   className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all ${currentView === TOTAL_VIEWS - 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'}`}
+                >
+                   下一页
+                   <ChevronRightIcon className="w-3.5 h-3.5" />
+                </button>
+            </div>
         </div>
       </div>
 
@@ -470,6 +664,73 @@ const Sidebar: React.FC<Props> = ({
                           className={`px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors shadow-sm ${!newPromptName || !newPromptContent ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-800 hover:bg-gray-900'}`}
                       >
                           保存角色
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Role Edit Modal */}
+      {isEditorOpen && editingPrompt && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-white dark:bg-[#1f1f1f] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-[#333] transform scale-100 animate-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-[#333] bg-gray-50/50 dark:bg-[#252525]">
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                          <EditIcon className="w-5 h-5 text-blue-600" />
+                          编辑角色
+                      </h3>
+                      <button onClick={handleCloseEditor} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                          <XIcon className="w-5 h-5" />
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">角色名称</label>
+                          <input 
+                              type="text" 
+                              value={newPromptName}
+                              onChange={(e) => setNewPromptName(e.target.value)}
+                              placeholder="例如：Python 专家"
+                              className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#444] rounded-xl text-sm focus:outline-none focus:border-gray-400 dark:text-white transition-colors"
+                          />
+                      </div>
+                      
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">简短描述</label>
+                          <input 
+                              type="text" 
+                              value={newPromptDesc}
+                              onChange={(e) => setNewPromptDesc(e.target.value)}
+                              placeholder="显示在卡片上的简介"
+                              className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#444] rounded-xl text-sm focus:outline-none focus:border-gray-400 dark:text-white transition-colors"
+                          />
+                      </div>
+
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">系统提示词 (System Prompt)</label>
+                          <textarea 
+                              value={newPromptContent}
+                              onChange={(e) => setNewPromptContent(e.target.value)}
+                              placeholder="你是一个..."
+                              className="w-full h-32 px-3 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#444] rounded-xl text-sm focus:outline-none focus:border-gray-400 resize-none custom-scrollbar dark:text-white transition-colors"
+                          />
+                      </div>
+                  </div>
+
+                  <div className="p-4 border-t border-gray-100 dark:border-[#333] flex justify-end gap-3 bg-gray-50/50 dark:bg-[#252525]">
+                      <button 
+                          onClick={handleCloseEditor}
+                          className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
+                      >
+                          取消
+                      </button>
+                      <button 
+                          onClick={handleUpdateRole}
+                          disabled={!newPromptName || !newPromptContent}
+                          className={`px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors shadow-sm ${!newPromptName || !newPromptContent ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                      >
+                          更新角色
                       </button>
                   </div>
               </div>

@@ -211,7 +211,8 @@ export class GeminiService {
   }
 
   private async fetchOneAPIBalance(): Promise<string | undefined> {
-      if (!this.baseUrl || this.provider === 'google' || this.provider === 'anthropic') return undefined;
+      // Skip balance check for Alibaba/DashScope due to CORS restrictions in browser environment
+      if (!this.baseUrl || this.provider === 'google' || this.provider === 'anthropic' || this.provider === 'alibaba') return undefined;
       const endpoints = [`${this.baseUrl}/dashboard/billing/usage`, `${this.baseUrl}/api/user/status`];
       for (const ep of endpoints) {
           try {
@@ -221,7 +222,10 @@ export class GeminiService {
                   if (data.balance !== undefined) return `¥${Number(data.balance).toFixed(2)}`;
                   if (data.quota !== undefined) return `Quota: ${data.quota}`; 
               }
-          } catch(e) {}
+          } catch(e) {
+              // Silently ignore CORS errors in browser environment
+              console.warn('Balance check failed (CORS):', e);
+          }
       }
       return undefined;
   }

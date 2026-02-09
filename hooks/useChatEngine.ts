@@ -145,8 +145,12 @@ export const useChatEngine = ({
     
     setIsLoading(true);
 
-    if (abortControllerRef.current) abortControllerRef.current.abort();
+    // Fix race condition: save old controller reference before creating new one
+    const prevController = abortControllerRef.current;
     abortControllerRef.current = new AbortController();
+    if (prevController) {
+      prevController.abort();
+    }
 
     try {
       await geminiService.sendMessageStream(

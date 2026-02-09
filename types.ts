@@ -105,6 +105,9 @@ export interface PromptPreset {
   name: string;
   description: string;
   content: string;
+  isActive?: boolean; // Whether the preset is enabled
+  leftEnabled?: boolean; // Enabled for left side in split mode
+  rightEnabled?: boolean; // Enabled for right side in split mode
 }
 
 export interface KnowledgeFile {
@@ -114,6 +117,8 @@ export interface KnowledgeFile {
   size: number;
   timestamp: number;
   isActive: boolean; // Whether to include in current context
+  leftEnabled?: boolean; // Enabled for left side in split mode
+  rightEnabled?: boolean; // Enabled for right side in split mode
 }
 
 export interface AppState {

@@ -285,7 +285,7 @@ const InputArea: React.FC<Props> = ({
                   {isRight && (
                       <button 
                           onClick={() => toggleRecording(isRight)}
-                          className={`p-2 rounded-xl transition-all ${activeRecording ? 'text-red-500 bg-red-100 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                          className={`p-2 transition-all ${activeRecording ? 'text-red-500 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400'}`}
                           title="语音输入"
                       >
                           <MicIcon className="w-5 h-5" active={activeRecording} />
@@ -295,7 +295,7 @@ const InputArea: React.FC<Props> = ({
                   <button 
                       onClick={() => fileRef.current?.click()}
                       disabled={!supportsImages}
-                      className={`p-2 rounded-xl transition-colors hover:bg-gray-200 dark:hover:bg-gray-600 ${!supportsImages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400'}`}
+                      className={`p-2 transition-colors ${!supportsImages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'}`}
                       title="上传文件 (图片/音频/视频/文档)"
                   >
                       <PlusIcon className="w-5 h-5" />
@@ -306,7 +306,7 @@ const InputArea: React.FC<Props> = ({
                   {!isRight && (
                       <button 
                           onClick={() => toggleRecording(isRight)}
-                          className={`p-2 rounded-xl transition-all ${activeRecording ? 'text-red-500 bg-red-100 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                          className={`p-2 transition-all ${activeRecording ? 'text-red-500 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400'}`}
                           title="语音输入"
                       >
                           <MicIcon className="w-5 h-5" active={activeRecording} />
@@ -317,7 +317,7 @@ const InputArea: React.FC<Props> = ({
                   {isSplitScreen && !isRight && (
                       <button 
                           onClick={() => setIsSplitInput(!isSplitInput)}
-                          className={`p-2 rounded-xl transition-all hover:bg-gray-200 dark:hover:bg-gray-600 ${isSplitInput ? 'text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600' : 'text-gray-500 dark:text-gray-400'}`}
+                          className={`p-2 transition-all ${isSplitInput ? 'text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'}`}
                           title={isSplitInput ? "合并输入框" : "独立输入框"}
                       >
                           <ColumnsIcon className="w-5 h-5" />
@@ -328,7 +328,7 @@ const InputArea: React.FC<Props> = ({
                   {isSplitScreen && !isRight && isSplitInput && (
                       <button 
                           onClick={onToggleAutoBattle}
-                          className={`p-2 rounded-xl transition-all ${isAutoBattle ? 'bg-orange-500 text-white shadow-md animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                          className={`p-2 transition-all ${isAutoBattle ? 'text-orange-500 animate-pulse' : 'text-gray-500 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400'}`}
                           title={isAutoBattle ? "停止对战" : "AI 对战"}
                       >
                           {isAutoBattle ? <StopIcon className="w-5 h-5" /> : <SwordsIcon className="w-5 h-5" />}
@@ -342,16 +342,14 @@ const InputArea: React.FC<Props> = ({
               {/* Token Count Removed from Toolbar */}
 
               {isSplitScreen && isRight && isSplitInput && (
-                   <>
-                       <div className="w-[1px] h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                       
+                   <div className="flex items-center gap-1">
                        <button 
                           onClick={() => onManualRelay('right_to_left')}
                           disabled={!canRelay('right_to_left')}
-                          className={`p-2 rounded-xl transition-all ${
+                          className={`p-2 transition-all ${
                               !canRelay('right_to_left')
                               ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
-                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                           }`}
                           title={isMobile ? "将下方最新回复发送给上方" : "将右侧最新回复发送给左侧"}
                       >
@@ -361,16 +359,16 @@ const InputArea: React.FC<Props> = ({
                       <button 
                           onClick={() => onManualRelay('left_to_right')}
                           disabled={!canRelay('left_to_right')}
-                          className={`p-2 rounded-xl transition-all ${
+                          className={`p-2 transition-all ${
                               !canRelay('left_to_right')
                               ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
-                              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                           }`}
                           title={isMobile ? "将上方最新回复发送给下方" : "将左侧最新回复发送给右侧"}
                       >
                           {isMobile ? <ArrowDownIcon className="w-5 h-5" /> : <ArrowRightIcon className="w-5 h-5" />}
                       </button>
-                   </>
+                   </div>
               )}
           </div>
       );
@@ -392,7 +390,7 @@ const InputArea: React.FC<Props> = ({
                     className="p-2 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"
                     title="停止生成"
                 >
-                    <StopIcon className="w-6 h-6" />
+                    <StopIcon className="w-5 h-5" />
                 </button>
            );
        }
@@ -413,7 +411,7 @@ const InputArea: React.FC<Props> = ({
                 }`}
                 title="发送"
             >
-                <SendIcon className="w-6 h-6" />
+                <SendIcon className="w-5 h-5" />
             </button>
        );
   };
@@ -474,7 +472,7 @@ const InputArea: React.FC<Props> = ({
               </div>
 
               {/* Token Count Row - Displayed below the module using current space */}
-              <div className="h-4 min-h-[16px] text-[10px] text-gray-400 font-mono px-3 mt-1 flex justify-end">
+              <div className="h-4 min-h-[16px] text-[10px] text-gray-400 font-mono px-3 mt-1 flex justify-end items-end">
                    {estimateTokens(currentText) > 0 && <span>~{estimateTokens(currentText)} tokens</span>}
               </div>
           </div>
@@ -486,27 +484,27 @@ const InputArea: React.FC<Props> = ({
       const hasContent = (text.trim() || attachments.length > 0) || (textRight.trim() || attachmentsRight.length > 0);
       
       return (
-          <div className="flex items-end pb-6 animate-in zoom-in duration-300 h-full">
+          <div className="flex items-end animate-in zoom-in duration-300">
                {isSending && !isAutoBattle ? (
                    <button 
                         onClick={() => { onStop('left'); onStop('right'); }}
-                        className="p-3 rounded-full text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                        className="p-2 text-red-500 flex items-center justify-center hover:text-red-600 transition-all"
                         title="停止生成"
                    >
-                        <StopIcon className="w-8 h-8" />
+                        <StopIcon className="w-5 h-5" />
                    </button>
                ) : (
                    <button 
                         onClick={handleCenterSend}
                         disabled={!hasContent}
-                        className={`p-3 rounded-full flex items-center justify-center transition-all ${
+                        className={`p-2 flex items-center justify-center transition-all ${
                              hasContent 
-                             ? 'text-gray-700 dark:text-gray-300 hover:scale-110' 
+                             ? 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white' 
                              : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                         }`}
                         title="发送"
                    >
-                        <SendIcon className="w-8 h-8" />
+                        <SendIcon className="w-5 h-5" />
                    </button>
                )}
           </div>
@@ -514,36 +512,27 @@ const InputArea: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-full bg-white dark:bg-[#212121] pt-1 pb-4 px-4 md:px-0 z-30 flex-shrink-0 flex flex-col gap-2 border-t border-transparent">
-        <div className="max-w-3xl mx-auto w-full">
+    <div className="w-full bg-white dark:bg-[#212121] pt-8 pb-2 px-2 sm:px-4 md:px-0 z-30 flex-shrink-0 flex flex-col gap-2 border-t border-transparent mt-auto">
+        <div className={`mx-auto w-full ${isSplitInput && isSplitScreen ? 'max-w-full md:max-w-[95vw] lg:max-w-[90vw]' : 'max-w-3xl'}`}>
             
-            <div className="flex items-end gap-0 transition-all duration-500 ease-in-out relative">
+            <div className={`flex items-end justify-center gap-2 md:gap-3 transition-all duration-500 ease-in-out relative ${isSplitInput && isSplitScreen ? 'w-full px-0 md:px-4' : ''}`}>
                 
                 <div className={`flex-1 min-w-0 transition-all duration-500 ${isSplitInput && isSplitScreen ? '' : ''}`}>
                     {renderInputBox('left')}
                 </div>
 
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden flex justify-center ${
-                    isSplitInput && isSplitScreen ? 'w-16 opacity-100 px-2' : 'w-0 opacity-0 px-0'
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden flex justify-center items-end pb-6 ${
+                    isSplitInput && isSplitScreen ? 'w-8 md:w-10 opacity-100' : 'w-0 opacity-0 px-0'
                 }`}>
                     {isSplitInput && isSplitScreen && renderCentralButton()}
                 </div>
 
-                <div className={`min-w-0 transition-all duration-500 ease-in-out overflow-hidden ${
-                    isSplitInput && isSplitScreen ? 'flex-1 opacity-100' : 'w-0 opacity-0 flex-[0]'
+                <div className={`flex-1 min-w-0 transition-all duration-500 ease-in-out ${
+                    isSplitInput && isSplitScreen ? 'opacity-100' : 'w-0 opacity-0 flex-[0] overflow-hidden'
                 }`}>
                     {renderInputBox('right')}
                 </div>
 
-            </div>
-            
-            <div className="text-center h-4 mt-1">
-               {(leftIncognito || rightIncognito) && (
-                   <p className="text-[10px] text-purple-500 flex items-center justify-center gap-1 animate-in fade-in">
-                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block"></span>
-                      无痕模式已开启
-                   </p>
-               )}
             </div>
         </div>
     </div>

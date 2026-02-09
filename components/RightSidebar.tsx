@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { SettingsIcon, SparklesIcon, ChevronDownIcon, ChevronUpIcon, KeyIcon, GoogleIcon, TrashIcon, OpenAIIcon, AnthropicIcon, ApiIcon, EditIcon, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, AlertTriangleIcon, GlobeIcon, FileTextIcon } from './Icons';
+import { SettingsIcon, ChevronDownIcon, ChevronUpIcon, KeyIcon, GoogleIcon, TrashIcon, OpenAIIcon, AnthropicIcon, ApiIcon, EditIcon, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, AlertTriangleIcon, GlobeIcon, FileTextIcon, ComputerIcon } from './Icons';
 import { StoredKey, ModelProvider, ModelCapability, GenerationConfig } from '../types';
 import { API_PROVIDERS } from '../constants';
 import { GeminiService } from '../services/geminiService';
@@ -22,13 +22,10 @@ interface Props {
   onExport: () => void;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   targetSectionTrigger?: { section: string, timestamp: number } | null;
-  // New Props for Incognito & Theme
   isIncognito: boolean;
   onToggleIncognito: () => void;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
-  
-  // Extended props for split screen
+  theme: 'light' | 'dark' | 'system';
+  onSetTheme: (theme: 'light' | 'dark' | 'system') => void;
   isSplitScreen?: boolean;
   leftSystemInstruction?: string;
   rightSystemInstruction?: string;
@@ -95,7 +92,7 @@ const RightSidebar: React.FC<Props> = ({
   isIncognito,
   onToggleIncognito,
   theme,
-  onToggleTheme,
+  onSetTheme,
   isSplitScreen,
   leftSystemInstruction,
   rightSystemInstruction,
@@ -104,19 +101,14 @@ const RightSidebar: React.FC<Props> = ({
 }) => {
   const modelDef = availableModels.find(m => m.id === currentModelId);
 
-  // State for sections
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-      'app': false,
       'keys': false,
       'model': false,
       'prompts': false,
-      'storage': false
+      'app': false
   });
 
-  // State for Split Prompt Tabs
   const [activePromptTab, setActivePromptTab] = useState<'left' | 'right'>('left');
-
-  // Storage State
   const [storageUsage, setStorageUsage] = useState<{ usage: number, quota: number } | null>(null);
 
   useEffect(() => {
@@ -139,24 +131,21 @@ const RightSidebar: React.FC<Props> = ({
       return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
   }
 
-  // Handle Auto-Collapse/Expand logic...
   useEffect(() => {
       if (!isOpen) {
           const timer = setTimeout(() => {
-              setOpenSections({ 'app': false, 'keys': false, 'model': false, 'prompts': false, 'storage': false });
+              setOpenSections({ 'keys': false, 'model': false, 'prompts': false, 'app': false });
           }, 300); 
           return () => clearTimeout(timer);
       }
   }, [isOpen]);
 
-  // Trigger expansion
   useEffect(() => {
       if (isOpen && targetSectionTrigger) {
           setOpenSections(prev => ({ ...prev, [targetSectionTrigger.section]: true }));
       }
   }, [targetSectionTrigger]);
 
-  // Key Management State
   const [inputKey, setInputKey] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('google');
   const [customBaseUrl, setCustomBaseUrl] = useState('');
@@ -167,7 +156,6 @@ const RightSidebar: React.FC<Props> = ({
   const [verifyError, setVerifyError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Auto-fill Base URL when provider changes
   useEffect(() => {
       const providerDef = API_PROVIDERS.find(p => p.id === selectedProvider);
       if (providerDef) {
@@ -246,26 +234,21 @@ const RightSidebar: React.FC<Props> = ({
 
   return (
     <>
-        {/* Backdrop */}
         <div 
             className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             onClick={onClose}
         />
 
-        <div className={`fixed inset-y-0 right-0 z-50 w-[340px] bg-[#fafafa] dark:bg-[#171717] border-l border-gray-200 dark:border-none shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed inset-y-0 right-0 z-50 w-[340px] bg-white dark:bg-[#212121] border-l border-gray-200 dark:border-[#2f2f2f] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#1a1a1a]">
-            <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                <SparklesIcon className="w-5 h-5 text-purple-500" />
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121]">
+            <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
                 配置与服务
             </h2>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-white dark:bg-[#212121]">
             
-            {/* 1. API Keys Management Section */}
             <AccordionItem
                 title={editingKeyId ? "编辑密钥" : "添加密钥 (OneAPI / 厂商)"}
                 icon={<KeyIcon className="w-4 h-4" />}
@@ -273,7 +256,6 @@ const RightSidebar: React.FC<Props> = ({
                 onToggle={() => toggleSection('keys')}
             >
                 <div className="space-y-4">
-                    {/* Platform Selector */}
                     <div className="space-y-1">
                         <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider ml-1">选择平台 / 厂商</label>
                         <select 
@@ -287,7 +269,6 @@ const RightSidebar: React.FC<Props> = ({
                         </select>
                     </div>
 
-                    {/* API Key Input */}
                     <div className="space-y-1">
                         <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider ml-1">API Key</label>
                         <div className="relative">
@@ -301,7 +282,6 @@ const RightSidebar: React.FC<Props> = ({
                         </div>
                     </div>
 
-                    {/* Base URL (Conditional) */}
                     <div className="space-y-1">
                         <div className="flex justify-between items-center px-1">
                              <label className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">代理 / Base URL</label>
@@ -353,7 +333,6 @@ const RightSidebar: React.FC<Props> = ({
                     {verifyError && <div className="text-[10px] text-red-500 bg-red-50 dark:bg-red-900/10 p-2 rounded break-all">{verifyError}</div>}
                     {successMsg && <div className="text-[10px] text-green-600 bg-green-50 dark:bg-green-900/10 p-2 rounded">{successMsg}</div>}
 
-                    {/* Key List */}
                     <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-[#333]">
                         {storedKeys.length === 0 && <div className="text-center text-gray-400 text-xs py-2">暂无已验证的密钥</div>}
                         {storedKeys.map(key => (
@@ -404,55 +383,6 @@ const RightSidebar: React.FC<Props> = ({
                 </div>
             </AccordionItem>
 
-            {/* 2. System Instruction / Persona Section */}
-            <AccordionItem 
-                title={isSplitScreen ? "分屏提示词设置" : "系统提示词 (Persona)"}
-                icon={<FileTextIcon className="w-4 h-4" />}
-                isOpen={openSections['prompts']}
-                onToggle={() => toggleSection('prompts')}
-            >
-                {isSplitScreen ? (
-                    <div className="space-y-3">
-                        {/* Tabs */}
-                        <div className="flex p-1 bg-gray-100 dark:bg-[#333] rounded-lg">
-                            <button
-                                onClick={() => setActivePromptTab('left')}
-                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activePromptTab === 'left' ? 'bg-white dark:bg-[#212121] shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                            >
-                                左屏 (正方)
-                            </button>
-                            <button
-                                onClick={() => setActivePromptTab('right')}
-                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activePromptTab === 'right' ? 'bg-white dark:bg-[#212121] shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                            >
-                                右屏 (反方)
-                            </button>
-                        </div>
-                        
-                        <textarea 
-                            value={activePromptTab === 'left' ? leftSystemInstruction : rightSystemInstruction}
-                            onChange={(e) => {
-                                if (activePromptTab === 'left' && setLeftSystemInstruction) setLeftSystemInstruction(e.target.value);
-                                if (activePromptTab === 'right' && setRightSystemInstruction) setRightSystemInstruction(e.target.value);
-                            }}
-                            placeholder={activePromptTab === 'left' ? "设置左侧 AI 的人设..." : "设置右侧 AI 的人设..."}
-                            className="w-full h-40 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#333] rounded-lg text-xs focus:outline-none focus:border-gray-400 resize-none custom-scrollbar"
-                        />
-                        <p className="text-[10px] text-gray-400">
-                            在 AI 对战模式下，不同的提示词可以让两个 AI 扮演不同的立场进行辩论。
-                        </p>
-                    </div>
-                ) : (
-                    <textarea 
-                        value={systemInstruction}
-                        onChange={(e) => onSystemInstructionChange(e.target.value)}
-                        placeholder="你是一个..."
-                        className="w-full h-40 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#333] rounded-lg text-xs focus:outline-none focus:border-gray-400 resize-none custom-scrollbar"
-                    />
-                )}
-            </AccordionItem>
-
-            {/* 3. Model Info Section */}
             <AccordionItem 
                 title="当前模型信息" 
                 icon={<SettingsIcon className="w-4 h-4" />}
@@ -491,7 +421,52 @@ const RightSidebar: React.FC<Props> = ({
                 )}
             </AccordionItem>
 
-            {/* 4. Application Settings Section */}
+            <AccordionItem 
+                title={isSplitScreen ? "分屏提示词设置" : "系统提示词 (Persona)"}
+                icon={<FileTextIcon className="w-4 h-4" />}
+                isOpen={openSections['prompts']}
+                onToggle={() => toggleSection('prompts')}
+            >
+                {isSplitScreen ? (
+                    <div className="space-y-3">
+                        <div className="flex p-1 bg-gray-100 dark:bg-[#333] rounded-lg">
+                            <button
+                                onClick={() => setActivePromptTab('left')}
+                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activePromptTab === 'left' ? 'bg-white dark:bg-[#212121] shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                左屏 (正方)
+                            </button>
+                            <button
+                                onClick={() => setActivePromptTab('right')}
+                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activePromptTab === 'right' ? 'bg-white dark:bg-[#212121] shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                            >
+                                右屏 (反方)
+                            </button>
+                        </div>
+                        
+                        <textarea 
+                            value={activePromptTab === 'left' ? leftSystemInstruction : rightSystemInstruction}
+                            onChange={(e) => {
+                                if (activePromptTab === 'left' && setLeftSystemInstruction) setLeftSystemInstruction(e.target.value);
+                                if (activePromptTab === 'right' && setRightSystemInstruction) setRightSystemInstruction(e.target.value);
+                            }}
+                            placeholder={activePromptTab === 'left' ? "设置左侧 AI 的人设..." : "设置右侧 AI 的人设..."}
+                            className="w-full h-40 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#333] rounded-lg text-xs focus:outline-none focus:border-gray-400 resize-none custom-scrollbar"
+                        />
+                        <p className="text-[10px] text-gray-400">
+                            在 AI 对战模式下，不同的提示词可以让两个 AI 扮演不同的立场进行辩论。
+                        </p>
+                    </div>
+                ) : (
+                    <textarea 
+                        value={systemInstruction}
+                        onChange={(e) => onSystemInstructionChange(e.target.value)}
+                        placeholder="你是一个..."
+                        className="w-full h-40 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#333] rounded-lg text-xs focus:outline-none focus:border-gray-400 resize-none custom-scrollbar"
+                    />
+                )}
+            </AccordionItem>
+
             <AccordionItem
                 title="应用设置"
                 icon={<SettingsIcon className="w-4 h-4" />}
@@ -499,7 +474,6 @@ const RightSidebar: React.FC<Props> = ({
                 onToggle={() => toggleSection('app')}
             >
                 <div className="space-y-3">
-                    {/* Search Grounding Toggle - Only Visible for Google Models */}
                     {modelDef?.provider === 'google' && (
                         <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333] animate-in fade-in slide-in-from-top-2">
                             <div className="flex items-center gap-2">
@@ -518,7 +492,6 @@ const RightSidebar: React.FC<Props> = ({
                         </div>
                     )}
 
-                    {/* Incognito Toggle */}
                     <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]">
                         <div className="flex items-center gap-2">
                             {isIncognito ? <EyeOffIcon className="w-4 h-4 text-purple-500" /> : <EyeIcon className="w-4 h-4 text-gray-400" />}
@@ -535,65 +508,72 @@ const RightSidebar: React.FC<Props> = ({
                         </button>
                     </div>
 
-                    {/* Theme Toggle */}
-                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]">
-                        <div className="flex items-center gap-2">
-                            {theme === 'light' ? <SunIcon className="w-4 h-4 text-amber-500" /> : <MoonIcon className="w-4 h-4 text-gray-500" />}
+                    <div className="p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]">
+                        <div className="flex items-center gap-2 mb-2">
+                            {theme === 'system' ? <ComputerIcon className="w-4 h-4 text-blue-500" /> : theme === 'light' ? <SunIcon className="w-4 h-4 text-amber-500" /> : <MoonIcon className="w-4 h-4 text-gray-500" />}
                             <div className="flex flex-col">
                                 <span className="text-xs font-medium text-gray-700 dark:text-gray-200">界面主题</span>
-                                <span className="text-[9px] text-gray-400">{theme === 'light' ? '当前：浅色模式' : '当前：深色模式'}</span>
+                                <span className="text-[9px] text-gray-400">
+                                    {theme === 'system' ? '跟随系统' : theme === 'light' ? '当前：浅色模式' : '当前：深色模式'}
+                                </span>
                             </div>
                         </div>
-                        <button 
-                            onClick={onToggleTheme}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${theme === 'dark' ? 'bg-gray-600' : 'bg-amber-400'}`}
-                        >
-                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-1'}`} />
-                        </button>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => onSetTheme('light')}
+                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${theme === 'light' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                            >
+                                浅色
+                            </button>
+                            <button
+                                onClick={() => onSetTheme('dark')}
+                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${theme === 'dark' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                            >
+                                深色
+                            </button>
+                            <button
+                                onClick={() => onSetTheme('system')}
+                                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${theme === 'system' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                            >
+                                跟随系统
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </AccordionItem>
 
-             {/* 5. Storage Management Section */}
-             <AccordionItem
-                title="存储空间管理"
-                icon={<TrashIcon className="w-4 h-4" />}
-                isOpen={openSections['storage']}
-                onToggle={() => toggleSection('storage')}
-            >
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]">
-                        <div className="flex flex-col">
-                             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">已用空间</span>
-                             <span className="text-[9px] text-gray-400 font-mono">
-                                 {storageUsage ? formatBytes(storageUsage.usage) : '计算中...'}
-                             </span>
+                    <div className="border-t border-gray-100 dark:border-[#333] pt-3 mt-3">
+                        <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333] mb-3">
+                            <div className="flex flex-col">
+                                 <span className="text-xs font-medium text-gray-700 dark:text-gray-200">已用空间</span>
+                                 <span className="text-[9px] text-gray-400 font-mono">
+                                     {storageUsage ? formatBytes(storageUsage.usage) : '计算中...'}
+                                 </span>
+                            </div>
+                            <div className="text-right">
+                                 <span className="text-xs font-medium text-gray-700 dark:text-gray-200">剩余配额</span>
+                                 <span className="text-[9px] text-gray-400 font-mono block">
+                                     {storageUsage ? formatBytes(storageUsage.quota - storageUsage.usage) : '...'}
+                                 </span>
+                            </div>
                         </div>
-                        <div className="text-right">
-                             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">剩余配额</span>
-                             <span className="text-[9px] text-gray-400 font-mono block">
-                                 {storageUsage ? formatBytes(storageUsage.quota - storageUsage.usage) : '...'}
-                             </span>
-                        </div>
+                        
+                        <button 
+                            onClick={async () => {
+                                if (window.confirm("确定要清空所有本地数据吗？这将删除所有对话记录和图片缓存，无法恢复。API Key 不会被删除。")) {
+                                    await DB.clearAllSessions();
+                                    alert("数据已清空，请刷新页面。");
+                                    window.location.reload();
+                                }
+                            }}
+                            className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 text-xs font-medium border border-red-100 dark:border-red-900/30 transition-colors"
+                        >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            清空所有聊天记录 (保留 Key)
+                        </button>
+                        
+                        <p className="text-[9px] text-gray-400 leading-relaxed text-center mt-2">
+                            所有数据均存储在浏览器的 IndexedDB 中。
+                        </p>
                     </div>
-                    
-                    <button 
-                        onClick={async () => {
-                            if (window.confirm("确定要清空所有本地数据吗？这将删除所有对话记录和图片缓存，无法恢复。API Key 不会被删除。")) {
-                                await DB.clearAllSessions();
-                                alert("数据已清空，请刷新页面。");
-                                window.location.reload();
-                            }
-                        }}
-                        className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 text-xs font-medium border border-red-100 dark:border-red-900/30 transition-colors"
-                    >
-                        <TrashIcon className="w-3.5 h-3.5" />
-                        清空所有聊天记录 (保留 Key)
-                    </button>
-                    
-                    <p className="text-[9px] text-gray-400 leading-relaxed text-center">
-                        所有数据均存储在浏览器的 IndexedDB 中。
-                    </p>
                 </div>
             </AccordionItem>
             
