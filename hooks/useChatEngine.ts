@@ -101,6 +101,7 @@ export const useChatEngine = ({
     attachments: Attachment[],
     history: Message[],
     modelId: string,
+    modelName: string,
     onUpdateMessages: (updatedMessages: Message[]) => void,
     isHidden: boolean = false
   ) => {
@@ -136,7 +137,8 @@ export const useChatEngine = ({
       role: MessageRole.MODEL,
       content: '', // Start empty
       timestamp: Date.now(),
-      modelId: modelId
+      modelId: modelId,
+      modelName: modelName
     };
 
     // Update UI with empty bot message immediately
@@ -188,6 +190,7 @@ export const useChatEngine = ({
   const regenerate = useCallback(async (
       history: Message[], 
       modelId: string, 
+      modelName: string,
       onUpdateMessages: (updatedMessages: Message[]) => void
   ) => {
       const lastMsg = history[history.length - 1];
@@ -205,6 +208,7 @@ export const useChatEngine = ({
           lastUserMsg.attachments || [], 
           historyWithoutLastBot.slice(0, -1), 
           modelId, 
+          modelName,
           onUpdateMessages,
           lastUserMsg.isHidden
       );

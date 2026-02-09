@@ -610,19 +610,23 @@ export default function App() {
       // 标记有未保存内容
       setHasUnsavedContent(true);
 
+      // 获取模型名称
+      const leftModelName = getModelName(currentModelId);
+      const rightModelName = getModelName(rightModelId);
+
       // Send to both sides simultaneously
       const promises: Promise<void>[] = [];
 
       if (isLeft) {
           promises.push(
-              leftEngine.sendMessage(text, attachments, messagesRef.current, currentModelId, setMessages, forceHidden)
+              leftEngine.sendMessage(text, attachments, messagesRef.current, currentModelId, leftModelName, setMessages, forceHidden)
                   .catch(() => { showToast(isSplitScreen ? "左侧发送失败" : "发送失败", 'error'); })
           );
       }
 
       if (isRight && isSplitScreen) {
           promises.push(
-              rightEngine.sendMessage(text, attachments, rightMessagesRef.current, rightModelId, setRightMessages, forceHidden)
+              rightEngine.sendMessage(text, attachments, rightMessagesRef.current, rightModelId, rightModelName, setRightMessages, forceHidden)
                   .catch(() => { showToast("右侧发送失败", 'error'); })
           );
       }
@@ -631,7 +635,7 @@ export default function App() {
       
       // 消息发送完成后，实时更新历史记录列表
       await realtimeUpdateSession();
-  }, [isSplitScreen, currentModelId, rightModelId, leftEngine, rightEngine, realtimeUpdateSession]);
+  }, [isSplitScreen, currentModelId, rightModelId, leftEngine, rightEngine, realtimeUpdateSession, getModelName]);
 
   const handleManualRelay = useCallback((direction: 'left_to_right' | 'right_to_left') => {
       if (leftEngine.isLoading || rightEngine.isLoading) return;
@@ -1019,7 +1023,7 @@ export default function App() {
                     <ChatInterface 
                         messages={messages} 
                         isLoading={leftEngine.isLoading} 
-                        onRegenerate={() => leftEngine.regenerate(messages, currentModelId, setMessages)}
+                        onRegenerate={() => leftEngine.regenerate(messages, currentModelId, getModelName(currentModelId), setMessages)}
                         onEditMessage={(id, text) => handleSendMessage(text, [], 'left')} 
                         onBookmark={(id) => setMessages(m => m.map(msg => msg.id === id ? { ...msg, isBookmarked: !msg.isBookmarked } : msg))}
                         isMirrored={false}
@@ -1039,7 +1043,7 @@ export default function App() {
                         <ChatInterface 
                             messages={rightMessages} 
                             isLoading={rightEngine.isLoading} 
-                            onRegenerate={() => rightEngine.regenerate(rightMessages, rightModelId, setRightMessages)}
+                            onRegenerate={() => rightEngine.regenerate(rightMessages, rightModelId, getModelName(rightModelId), setRightMessages)}
                             onEditMessage={(id, text) => handleSendMessage(text, [], 'right')}
                             onBookmark={() => {}}
                             isMirrored={true} 
