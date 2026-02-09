@@ -102,16 +102,25 @@ export default function App() {
     return theme;
   }, [theme]);
 
+  // 标记是否已经初始化主题
+  const hasThemeInitialized = useRef(false);
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('gemini_theme') as 'light' | 'dark' | 'system' | null;
-    if (savedTheme) setTheme(savedTheme);
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+    hasThemeInitialized.current = true;
   }, []);
 
   useEffect(() => {
     const effectiveTheme = getEffectiveTheme();
     if (effectiveTheme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-    localStorage.setItem('gemini_theme', theme);
+    // 只在主题明确改变时保存（排除初始挂载）
+    if (hasThemeInitialized.current) {
+      localStorage.setItem('gemini_theme', theme);
+    }
   }, [theme, getEffectiveTheme]);
 
   // Listen for system theme changes
@@ -152,6 +161,9 @@ export default function App() {
 
     const storedModel = localStorage.getItem('gemini_model_id');
     if (storedModel) setCurrentModelId(storedModel);
+    
+    const storedRightModel = localStorage.getItem('gemini_right_model_id');
+    if (storedRightModel) setRightModelId(storedRightModel);
     
     const storedConfig = localStorage.getItem('gemini_gen_config');
     if (storedConfig) { try { setGenerationConfig(JSON.parse(storedConfig)); } catch {} }
@@ -306,11 +318,23 @@ export default function App() {
                   const { models } = await geminiService.getAvailableModels();
                   setAvailableModels(models);
                   
-                  if (!models.find(m => m.id === currentModelId)) {
-                      setCurrentModelId(models.length > 0 ? models[0].id : "");
+                  // 只在当前没有选中模型时，才设置为默认模型
+                  // 如果已经有选中模型且在新列表中，保持当前选择
+                  if (!currentModelId || !models.find(m => m.id === currentModelId)) {
+                      const savedModel = localStorage.getItem('gemini_model_id');
+                      if (savedModel && models.find(m => m.id === savedModel)) {
+                          setCurrentModelId(savedModel);
+                      } else {
+                          setCurrentModelId(models.length > 0 ? models[0].id : "");
+                      }
                   }
-                  if (!models.find(m => m.id === rightModelId)) {
-                      setRightModelId(models.length > 0 ? (models[1]?.id || models[0].id) : "");
+                  if (!rightModelId || !models.find(m => m.id === rightModelId)) {
+                      const savedRightModel = localStorage.getItem('gemini_right_model_id');
+                      if (savedRightModel && models.find(m => m.id === savedRightModel)) {
+                          setRightModelId(savedRightModel);
+                      } else {
+                          setRightModelId(models.length > 0 ? (models[1]?.id || models[0].id) : "");
+                      }
                   }
               } catch (e: any) {
                   setAvailableModels([]);
@@ -712,6 +736,17 @@ export default function App() {
       const setSelected = side === 'left' ? setCurrentModelId : setRightModelId;
       const modelDef = availableModels.find(m => m.id === selectedId);
 
+      const handleModelSelect = (modelId: string) => {
+          setSelected(modelId);
+          setIsModelMenuOpen(null);
+          // 保存到 localStorage
+          if (side === 'left') {
+              localStorage.setItem('gemini_model_id', modelId);
+          } else {
+              localStorage.setItem('gemini_right_model_id', modelId);
+          }
+      };
+
       return (
         <div className="relative w-full">
             <button 
@@ -737,7 +772,7 @@ export default function App() {
                     {availableModels.map(model => (
                         <button
                             key={model.id}
-                            onClick={() => { setSelected(model.id); setIsModelMenuOpen(null); }}
+                            onClick={() => handleModelSelect(model.id)}
                             className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#383838] transition-colors ${selectedId === model.id ? 'bg-gray-50 dark:bg-[#383838]' : ''}`}
                         >
                             <div className="flex flex-col gap-0.5 min-w-0">
