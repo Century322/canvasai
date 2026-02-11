@@ -51,7 +51,6 @@ export type ModelProvider =
   | 'anthropic' 
   | 'deepseek'
   | 'alibaba' // Dashscope
-  | 'tencent' // Hunyuan
   | 'moonshot' // Kimi
   | 'zhipu' // BigModel
   | 'minimax'
@@ -83,7 +82,11 @@ export interface ModelCapability {
   supportsAudio: boolean;
   isThinking?: boolean;
   isOnline?: boolean; 
-  contextWindow?: string; 
+  contextWindow?: string;
+  isAvailable?: boolean; // 是否可用
+  availabilityReason?: string; // 不可用原因
+  isPaid?: boolean; // 是否为付费模型
+  paymentTier?: 'free' | 'paid' | 'pro'; // 付费等级
 }
 
 export interface VoiceConfig {

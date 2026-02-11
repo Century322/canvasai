@@ -404,7 +404,7 @@ const InputArea: React.FC<Props> = ({
                     className="p-2 flex items-center justify-center transition-transform hover:scale-110 text-gray-800 dark:text-white"
                     title="停止生成"
                 >
-                    <StopIcon className="w-5 h-5" />
+                    <StopIcon className="w-5 h-5 animate-pulse" />
                 </button>
            );
        }

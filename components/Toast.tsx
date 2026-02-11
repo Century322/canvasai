@@ -11,14 +11,14 @@ interface Props {
 const Toast: React.FC<Props> = ({ toasts, onDismiss }) => {
   return (
     <div className="fixed top-16 right-4 z-[100] flex flex-col gap-2 pointer-events-none items-end">
-      {toasts.map(toast => (
-        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
+      {toasts.map((toast, index) => (
+        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} index={index} />
       ))}
     </div>
   );
 };
 
-const ToastItem: React.FC<{ toast: ToastNotification; onDismiss: (id: string) => void }> = ({ toast, onDismiss }) => {
+const ToastItem: React.FC<{ toast: ToastNotification; onDismiss: (id: string) => void; index: number }> = ({ toast, onDismiss, index }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onDismiss(toast.id);
@@ -43,7 +43,7 @@ const ToastItem: React.FC<{ toast: ToastNotification; onDismiss: (id: string) =>
   };
 
   return (
-    <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border border-opacity-50 animate-in slide-in-from-right-10 fade-in duration-300 ${getBgColor()}`}>
+    <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border border-opacity-50 animate-in fade-in duration-500 transition-all ${getBgColor()}`} style={{ animationDelay: `${index * 100}ms` }}>
       <div className="shrink-0">{getIcon()}</div>
       <span className="text-sm font-medium">{toast.message}</span>
       <button onClick={() => onDismiss(toast.id)} className="ml-2 text-current opacity-50 hover:opacity-100">

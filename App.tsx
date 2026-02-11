@@ -40,6 +40,14 @@ export default function App() {
   const [isModelMenuOpen, setIsModelMenuOpen] = useState<'left' | 'right' | null>(null);
   const [isIncognito, setIsIncognito] = useState(false);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  
+  // --- Model Selector State ---
+  const [modelSearch, setModelSearch] = useState<string>('');
+  const [rightModelSearch, setRightModelSearch] = useState<string>('');
+  const [inheritContext, setInheritContext] = useState<boolean>(false);
+  const [rightInheritContext, setRightInheritContext] = useState<boolean>(false);
+  const leftDropdownRef = useRef<HTMLDivElement>(null);
+  const rightDropdownRef = useRef<HTMLDivElement>(null);
 
   // --- Data State ---
   // sessions: 历史记录列表中的会话（已保存的）
@@ -88,7 +96,12 @@ export default function App() {
   const getModelName = (id: string) => availableModels.find(m => m.id === id)?.name || "AI";
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-      setToasts(prev => [...prev, { id: crypto.randomUUID(), message, type }]);
+      setToasts(prev => {
+          // 添加新消息到数组开头
+          const newToasts = [{ id: crypto.randomUUID(), message, type }, ...prev];
+          // 只保留最新的3条消息
+          return newToasts.slice(0, 3);
+      });
   };
   const dismissToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
@@ -722,8 +735,33 @@ export default function App() {
       const selectedId = side === 'left' ? currentModelId : rightModelId;
       const setSelected = side === 'left' ? setCurrentModelId : setRightModelId;
       const modelDef = availableModels.find(m => m.id === selectedId);
+      const searchTerm = side === 'left' ? modelSearch : rightModelSearch;
+      const setSearchTerm = side === 'left' ? setModelSearch : setRightModelSearch;
+      const inheritCtx = side === 'left' ? inheritContext : rightInheritContext;
+      const setInheritCtx = side === 'left' ? setInheritContext : setRightInheritContext;
+      const dropdownRef = side === 'left' ? leftDropdownRef : rightDropdownRef;
 
       const handleModelSelect = (modelId: string) => {
+          if (inheritCtx && selectedId !== modelId) {
+              // 继承上下文逻辑
+              const currentMessages = side === 'left' ? messages : rightMessages;
+              if (currentMessages.length > 0) {
+                  // 实际的上下文转换逻辑
+                  const newMessages = currentMessages.map(msg => ({
+                      ...msg,
+                      modelId: modelId
+                  }));
+                  
+                  // 更新消息列表，保持对话历史
+                  if (side === 'left') {
+                      setMessages(newMessages);
+                  } else {
+                      setRightMessages(newMessages);
+                  }
+                  
+                  showToast('已继承对话历史', 'info');
+              }
+          }
           setSelected(modelId);
           setIsModelMenuOpen(null);
           // 保存到 localStorage
@@ -734,12 +772,44 @@ export default function App() {
           }
       };
 
+      const handleDropdownOpen = () => {
+          setIsModelMenuOpen(isModelMenuOpen === side ? null : side);
+          // 自动滚动到选中的模型
+          setTimeout(() => {
+              if (isModelMenuOpen !== side && selectedId && dropdownRef.current) {
+                  const selectedModel = dropdownRef.current.querySelector(`[data-model-id="${selectedId}"]`);
+                  if (selectedModel) {
+                      selectedModel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+              }
+          }, 100);
+      };
+
+      // 过滤模型
+      const filteredModels = availableModels
+          .filter(model => {
+              if (!searchTerm) return true;
+              const searchLower = searchTerm.toLowerCase();
+              return (
+                  model.name.toLowerCase().includes(searchLower) ||
+                  model.id.toLowerCase().includes(searchLower) ||
+                  (model.description && model.description.toLowerCase().includes(searchLower))
+              );
+          })
+          .sort((a, b) => {
+              // 可用的模型排在前面，不可用的排在后面
+              if (a.isAvailable !== false && b.isAvailable === false) return -1;
+              if (a.isAvailable === false && b.isAvailable !== false) return 1;
+              // 可用模型内部按名称排序
+              return a.name.localeCompare(b.name);
+          });
+
       return (
         <div className="relative w-full">
             <button 
                 onClick={(e) => {
                     e.stopPropagation();
-                    setIsModelMenuOpen(isModelMenuOpen === side ? null : side);
+                    handleDropdownOpen();
                 }}
                 disabled={availableModels.length === 0}
                 className={`flex items-center justify-between w-full px-3 py-1.5 rounded-lg transition-colors group ${availableModels.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-[#2f2f2f]'}`}
@@ -755,25 +825,134 @@ export default function App() {
             )}
 
             {isModelMenuOpen === side && availableModels.length > 0 && (
-                <div className="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-white dark:bg-[#2f2f2f] rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 py-2 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[400px] overflow-y-auto custom-scrollbar">
-                    {availableModels.map(model => (
-                        <button
-                            key={model.id}
-                            onClick={() => handleModelSelect(model.id)}
-                            className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-[#383838] transition-colors ${selectedId === model.id ? 'bg-gray-50 dark:bg-[#383838]' : ''}`}
-                        >
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className={`text-sm font-medium truncate ${selectedId === model.id ? 'text-gray-900 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{model.name}</span>
-                                <span className="text-[10px] text-gray-400 truncate">{model.description}</span>
+                <div ref={dropdownRef} className="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-white dark:bg-[#2f2f2f] rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 py-1 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 max-h-[400px] overflow-y-auto custom-scrollbar">
+                    {/* 搜索框 */}
+                    <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="搜索模型..."
+                            className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#383838] text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        />
+                    </div>
+                    
+                    {/* 模型列表 */}
+                    {filteredModels.length > 0 ? (
+                        <>
+                            {filteredModels.map(model => (
+                                <button
+                                    key={model.id}
+                                    data-model-id={model.id}
+                                    onClick={() => model.isAvailable !== false && handleModelSelect(model.id)}
+                                    disabled={model.isAvailable === false}
+                                    className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${
+                                        model.isAvailable === false 
+                                            ? 'opacity-50 cursor-not-allowed' 
+                                            : selectedId === model.id 
+                                            ? 'bg-gray-50 dark:bg-[#383838] hover:bg-gray-50 dark:hover:bg-[#383838]' 
+                                            : 'hover:bg-gray-50 dark:hover:bg-[#383838]'
+                                    }`}
+                                >
+                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`text-sm font-medium truncate ${model.isAvailable === false ? 'text-gray-400 dark:text-gray-500' : selectedId === model.id ? 'text-gray-900 dark:text-white' : 'text-gray-800 dark:text-gray-200'}`}>{model.name}</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {model.supportsImages && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-0.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    视觉
+                                                </span>
+                                            )}
+                                            {model.supportsVideoGen && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400 flex items-center gap-0.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    视频
+                                                </span>
+                                            )}
+                                            {model.supportsAudio && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 flex items-center gap-0.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                                    </svg>
+                                                    音频
+                                                </span>
+                                            )}
+                                            {model.isThinking && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 flex items-center gap-0.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                                    </svg>
+                                                    推理
+                                                </span>
+                                            )}
+                                            {model.isOnline && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300 flex items-center gap-0.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+                                                    </svg>
+                                                    联网
+                                                </span>
+                                            )}
+                                            {model.contextWindow && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 flex items-center gap-0.5">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                                    </svg>
+                                                    {model.contextWindow}
+                                                </span>
+                                            )}
+                                            {model.isPaid === true && (
+                                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${model.paymentTier === 'pro' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>
+                                                    {model.paymentTier === 'pro' ? 'Pro' : '付费'}
+                                                </span>
+                                            )}
+                                            {model.isPaid === false && (
+                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                                    免费
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[10px] text-gray-400 truncate">{model.description}</span>
+                                        {model.isAvailable === false && (
+                                            <span className="text-[9px] text-gray-500 dark:text-gray-600">不可用</span>
+                                        )}
+                                    </div>
+                                    {selectedId === model.id && <div className="w-1.5 h-1.5 rounded-full bg-gray-700 dark:bg-gray-300 shrink-0"></div>}
+                                </button>
+                            ))}
+                            
+                            {/* 继承上下文选项 */}
+                            <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={inheritCtx}
+                                        onChange={(e) => setInheritCtx(e.target.checked)}
+                                        className="w-3.5 h-3.5 rounded border-gray-300 text-gray-600 focus:ring-gray-400"
+                                    />
+                                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                                        切换模型时继承对话历史
+                                    </span>
+                                </label>
                             </div>
-                            {selectedId === model.id && <div className="w-1.5 h-1.5 rounded-full bg-gray-700 dark:bg-gray-300 shrink-0"></div>}
-                        </button>
-                    ))}
+                        </>
+                    ) : (
+                        <div className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                            没有找到匹配的模型
+                        </div>
+                    )}
                 </div>
             )}
         </div>
       );
-  }, [currentModelId, rightModelId, availableModels, isModelMenuOpen]);
+  }, [currentModelId, rightModelId, availableModels, isModelMenuOpen, modelSearch, rightModelSearch, setModelSearch, setRightModelSearch, inheritContext, rightInheritContext, setInheritContext, setRightInheritContext, messages, rightMessages, showToast, leftDropdownRef, rightDropdownRef]);
 
   const renderHeader = useCallback(() => {
     return (
@@ -786,8 +965,13 @@ export default function App() {
                     {activeKeyObject ? renderModelSelector('left') : (
                         <button 
                             onClick={() => {
-                                setIsRightSidebarOpen(true);
-                                setTargetRightSidebarTrigger({ section: 'keys', timestamp: Date.now() });
+                                // 使用新的对象引用确保 useEffect 触发
+                                const newTrigger = { section: 'keys', timestamp: Date.now() };
+                                setTargetRightSidebarTrigger(newTrigger);
+                                // 强制重新渲染后再打开侧边栏
+                                setTimeout(() => {
+                                    setIsRightSidebarOpen(true);
+                                }, 0);
                             }} 
                             className="text-sm font-semibold text-gray-400 dark:text-gray-500 cursor-pointer whitespace-nowrap hover:text-gray-700 dark:hover:text-gray-200 transition-all animate-pulse"
                         >
@@ -1079,16 +1263,6 @@ export default function App() {
         onClose={() => setIsRightSidebarOpen(false)}
         currentModelId={currentModelId}
         availableModels={availableModels}
-        
-        systemInstruction={leftSystemInstruction} 
-        onSystemInstructionChange={setLeftSystemInstruction}
-        
-        leftSystemInstruction={leftSystemInstruction}
-        rightSystemInstruction={rightSystemInstruction}
-        setLeftSystemInstruction={setLeftSystemInstruction}
-        setRightSystemInstruction={setRightSystemInstruction}
-        isSplitScreen={isSplitScreen}
-
         config={generationConfig}
         onConfigChange={(c) => { setGenerationConfig(c); localStorage.setItem('gemini_gen_config', JSON.stringify(c)); }}
         storedKeys={storedKeys}
@@ -1102,31 +1276,6 @@ export default function App() {
         onDeleteKey={(id) => {
              setStoredKeys(prev => { const next = prev.filter(k => k.id !== id); localStorage.setItem('gemini_stored_keys', JSON.stringify(next)); return next; });
              showToast("密钥已删除", 'info');
-        }}
-        onExport={() => {
-              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessions));
-              const downloadAnchorNode = document.createElement('a');
-              downloadAnchorNode.setAttribute("href", dataStr);
-              downloadAnchorNode.setAttribute("download", "chat_history.json");
-              document.body.appendChild(downloadAnchorNode);
-              downloadAnchorNode.click();
-              downloadAnchorNode.remove();
-              showToast("导出成功", 'success');
-        }}
-        onImport={(e) => {
-             if (e.target.files && e.target.files[0]) {
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                      try {
-                          const imported = JSON.parse(event.target?.result as string);
-                          if (Array.isArray(imported)) {
-                              setSessions(prev => { const combined = [...imported, ...prev]; imported.forEach(s => DB.saveSession(s)); return combined; });
-                              showToast("导入成功", 'success');
-                          }
-                      } catch (e) { showToast("导入失败：文件格式错误", 'error'); }
-                  };
-                  reader.readAsText(e.target.files[0]);
-              }
         }}
         targetSectionTrigger={targetRightSidebarTrigger}
         isIncognito={isIncognito}

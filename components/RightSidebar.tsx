@@ -11,25 +11,16 @@ interface Props {
   onClose: () => void;
   currentModelId: string;
   availableModels: ModelCapability[]; 
-  systemInstruction: string;
-  onSystemInstructionChange: (text: string) => void;
   config: GenerationConfig;
   onConfigChange: (config: GenerationConfig) => void;
   storedKeys: StoredKey[];
   onAddKey: (key: StoredKey) => void;
   onToggleKey: (id: string) => void;
   onDeleteKey: (id: string) => void;
-  onExport: () => void;
-  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  targetSectionTrigger?: { section: string, timestamp: number } | null;
+  targetSectionTrigger: { section: string, timestamp: number } | null;
   isIncognito: boolean;
   onToggleIncognito: () => void;
-  theme: 'light' | 'dark';
-  isSplitScreen?: boolean;
-  leftSystemInstruction?: string;
-  rightSystemInstruction?: string;
-  setLeftSystemInstruction?: (t: string) => void;
-  setRightSystemInstruction?: (t: string) => void;
+  theme: 'light' | 'dark' | 'system';
 }
 
 const AccordionItem: React.FC<{
@@ -78,9 +69,7 @@ const RightSidebar: React.FC<Props> = ({
   isOpen,
   onClose,
   currentModelId,
-  availableModels,
-  systemInstruction,
-  onSystemInstructionChange,
+  availableModels, 
   config,
   onConfigChange,
   storedKeys,
@@ -90,23 +79,28 @@ const RightSidebar: React.FC<Props> = ({
   targetSectionTrigger,
   isIncognito,
   onToggleIncognito,
-  theme,
-  isSplitScreen,
-  leftSystemInstruction,
-  rightSystemInstruction,
-  setLeftSystemInstruction,
-  setRightSystemInstruction
+  theme
 }) => {
   const modelDef = availableModels.find(m => m.id === currentModelId);
 
+  // 使用 useMemo 计算 openSections 的值，确保每次 targetSectionTrigger 变化时都会更新
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
       'keys': false,
       'model': false,
-      'prompts': false,
       'app': false
   });
 
-  const [activePromptTab, setActivePromptTab] = useState<'left' | 'right'>('left');
+  // 当 targetSectionTrigger 变化时，强制更新 openSections
+  useEffect(() => {
+      if (targetSectionTrigger) {
+          // 直接设置新状态，不依赖 prevState
+          setOpenSections({
+              'keys': targetSectionTrigger.section === 'keys',
+              'model': targetSectionTrigger.section === 'model',
+              'app': targetSectionTrigger.section === 'app'
+          });
+      }
+  }, [targetSectionTrigger]);
   const [storageUsage, setStorageUsage] = useState<{ usage: number, quota: number } | null>(null);
 
   useEffect(() => {
@@ -132,17 +126,18 @@ const RightSidebar: React.FC<Props> = ({
   useEffect(() => {
       if (!isOpen) {
           const timer = setTimeout(() => {
-              setOpenSections({ 'keys': false, 'model': false, 'prompts': false, 'app': false });
+              setOpenSections({ 'keys': false, 'model': false, 'app': false });
           }, 300); 
           return () => clearTimeout(timer);
+      } else {
+          // 当侧边栏打开时，强制展开 keys 部分
+          // 无论 targetSectionTrigger 是什么，确保用户能看到密钥配置界面
+          setOpenSections(prev => ({
+              ...prev,
+              'keys': true
+          }));
       }
   }, [isOpen]);
-
-  useEffect(() => {
-      if (isOpen && targetSectionTrigger) {
-          setOpenSections(prev => ({ ...prev, [targetSectionTrigger.section]: true }));
-      }
-  }, [targetSectionTrigger]);
 
   const [inputKey, setInputKey] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('google');
@@ -419,51 +414,7 @@ const RightSidebar: React.FC<Props> = ({
                 )}
             </AccordionItem>
 
-            <AccordionItem 
-                title={isSplitScreen ? "分屏提示词设置" : "系统提示词 (Persona)"}
-                icon={<FileTextIcon className="w-4 h-4" />}
-                isOpen={openSections['prompts']}
-                onToggle={() => toggleSection('prompts')}
-            >
-                {isSplitScreen ? (
-                    <div className="space-y-3">
-                        <div className="flex p-1 bg-gray-100 dark:bg-[#333] rounded-lg">
-                            <button
-                                onClick={() => setActivePromptTab('left')}
-                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activePromptTab === 'left' ? 'bg-white dark:bg-[#212121] shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                            >
-                                左屏 (正方)
-                            </button>
-                            <button
-                                onClick={() => setActivePromptTab('right')}
-                                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activePromptTab === 'right' ? 'bg-white dark:bg-[#212121] shadow-sm text-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                            >
-                                右屏 (反方)
-                            </button>
-                        </div>
-                        
-                        <textarea 
-                            value={activePromptTab === 'left' ? leftSystemInstruction : rightSystemInstruction}
-                            onChange={(e) => {
-                                if (activePromptTab === 'left' && setLeftSystemInstruction) setLeftSystemInstruction(e.target.value);
-                                if (activePromptTab === 'right' && setRightSystemInstruction) setRightSystemInstruction(e.target.value);
-                            }}
-                            placeholder={activePromptTab === 'left' ? "设置左侧 AI 的人设..." : "设置右侧 AI 的人设..."}
-                            className="w-full h-40 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#333] rounded-lg text-xs focus:outline-none focus:border-gray-400 resize-none custom-scrollbar"
-                        />
-                        <p className="text-[10px] text-gray-400">
-                            在 AI 对战模式下，不同的提示词可以让两个 AI 扮演不同的立场进行辩论。
-                        </p>
-                    </div>
-                ) : (
-                    <textarea 
-                        value={systemInstruction}
-                        onChange={(e) => onSystemInstructionChange(e.target.value)}
-                        placeholder="你是一个..."
-                        className="w-full h-40 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#333] rounded-lg text-xs focus:outline-none focus:border-gray-400 resize-none custom-scrollbar"
-                    />
-                )}
-            </AccordionItem>
+
 
             <AccordionItem
                 title="应用设置"

@@ -70,46 +70,7 @@ const CodeCopyButton = ({ text }: { text: string }) => {
     );
 };
 
-const ThinkingProcess = ({ content, isFinished }: { content: string, isFinished: boolean }) => {
-    const [isCollapsed, setIsCollapsed] = useState(true);
 
-    if (!isFinished) {
-        return (
-            <div className="mb-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4 py-1">
-                <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400 animate-pulse">
-                    <BrainIcon className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-wide">深度思考中...</span>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-mono whitespace-pre-wrap break-words">
-                    {content}
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="mb-4 rounded-lg bg-gray-50 dark:bg-[#252525] border border-gray-100 dark:border-[#333] overflow-hidden">
-            <button 
-                onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }}
-                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-[#2f2f2f] transition-colors"
-            >
-                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                    <BrainIcon className="w-3.5 h-3.5" />
-                    <span className="text-xs font-medium">深度思考过程</span>
-                </div>
-                {isCollapsed ? <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400" /> : <ChevronUpIcon className="w-3.5 h-3.5 text-gray-400" />}
-            </button>
-            
-            {!isCollapsed && (
-                <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-[#333]">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-mono whitespace-pre-wrap break-words">
-                        {content}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
 
 const GroundingSources = ({ metadata }: { metadata: any }) => {
     if (!metadata?.groundingChunks || metadata.groundingChunks.length === 0) return null;
@@ -146,32 +107,7 @@ const GroundingSources = ({ metadata }: { metadata: any }) => {
 
 // Robust Parser to separate <think> content from main content
 // Handles cases where tags might be incomplete during streaming
-const parseThinkingContent = (content: string) => {
-    if (!content) return { think: null, main: "", isFinished: false };
 
-    // Standard Case: Full tags
-    const startTag = "<think>";
-    const endTag = "</think>";
-    
-    const startIndex = content.indexOf(startTag);
-    
-    if (startIndex === -1) {
-        return { think: null, main: content, isFinished: false };
-    }
-
-    const endIndex = content.indexOf(endTag);
-
-    if (endIndex !== -1) {
-        // Thinking is complete
-        const think = content.substring(startIndex + startTag.length, endIndex);
-        const main = content.substring(endIndex + endTag.length).trim();
-        return { think, main, isFinished: true };
-    } else {
-        // Thinking is ongoing or stream cut off
-        const think = content.substring(startIndex + startTag.length);
-        return { think, main: "", isFinished: false };
-    }
-};
 
 // Optimized Message Item with React.memo
 const MessageItemRaw: React.FC<{ 
@@ -212,17 +148,24 @@ const MessageItemRaw: React.FC<{
       setIsEditing(false);
   };
 
-  // Robust Parsing
-  let thinkContent: string | null = null;
-  let mainContent = message.content;
-  let isThinkingFinished = false;
+  // 处理消息内容，移除<think>标签及其内容，只保留主要内容
+  const processMessageContent = (content: string) => {
+    if (!content) return content;
+    
+    // 使用正则表达式移除<think>标签及其内容
+    // 处理各种格式的标签，包括可能的换行和空格
+    const thinkPattern = /<think>[\s\S]*?<\/think>/g;
+    const cleanedContent = content.replace(thinkPattern, '').trim();
+    
+    // 如果还有标签，再次处理
+    if (cleanedContent.includes('<think>')) {
+      return processMessageContent(cleanedContent);
+    }
+    
+    return cleanedContent;
+  };
 
-  if (!isUser && message.content) {
-      const parsed = parseThinkingContent(message.content);
-      thinkContent = parsed.think;
-      mainContent = parsed.main;
-      isThinkingFinished = parsed.isFinished;
-  }
+  const mainContent = processMessageContent(message.content);
 
   if (isUser) {
       return (
@@ -272,23 +215,34 @@ const MessageItemRaw: React.FC<{
                         </div>
                     </div>
                 ) : (
-                    <div className="relative max-w-full">
+                    <div className="inline-block max-w-full">
                         <div className={`bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[15px] leading-relaxed break-words whitespace-pre-wrap overflow-hidden`}>
-                            {message.content}
+                            {processMessageContent(message.content)}
                         </div>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-                            className={`absolute top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 bg-white dark:bg-[#2f2f2f] rounded-full shadow-sm border border-gray-100 dark:border-gray-700 ${isMirrored ? '-right-8' : '-left-8'}`}
-                            title="编辑"
-                        >
-                            <EditIcon className="w-3 h-3" />
-                        </button>
                     </div>
                 )}
-                {/* Timestamp for user message */}
-                <div className={`text-[10px] text-gray-400 mt-1 ${isMirrored ? 'text-left' : 'text-right'}`}>
-                    {new Date(message.timestamp).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})}
-                </div>
+                
+                {message.content && !message.isError && !isEditing && (
+                    <div className={`flex items-center gap-2 mt-2 ${isMirrored ? 'flex-row-reverse' : ''}`}>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleCopyContent(); }}
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            title="复制"
+                        >
+                            {copied ? <CheckIcon className="w-4 h-4 text-green-500" /> : <CopyIcon className="w-4 h-4" />}
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                            title="编辑"
+                        >
+                            <EditIcon className="w-4 h-4" />
+                        </button>
+                        <div className={`text-[10px] text-gray-400 ${isMirrored ? 'text-left' : 'text-right'}`}>
+                            {new Date(message.timestamp).toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
       );
@@ -331,60 +285,60 @@ const MessageItemRaw: React.FC<{
         ) : (
             <div className={`w-full max-w-full overflow-hidden ${isMirrored ? 'text-right' : 'text-left'}`}>
 
-                {thinkContent && (
-                    <ThinkingProcess content={thinkContent} isFinished={isThinkingFinished} />
-                )}
-
                 {mainContent && (
-                    <div className="markdown-body bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[15px] leading-relaxed">
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex, rehypeHighlight]}
-                            components={{
-                                code({node, inline, className, children, ...props}: any) {
-                                    const match = /language-(\w+)/.exec(className || '');
-                                    const codeText = String(children).replace(/\n$/, '');
-                                    const language = match ? match[1] : '';
+                    <div className="inline-block max-w-full md:max-w-[90%]">
+                        <div className="bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[15px] leading-relaxed">
+                            <div className="markdown-body">
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm, remarkMath]}
+                                    rehypePlugins={[rehypeKatex, rehypeHighlight]}
+                                    components={{
+                                        code({node, inline, className, children, ...props}: any) {
+                                            const match = /language-(\w+)/.exec(className || '');
+                                            const codeText = String(children).replace(/\n$/, '');
+                                            const language = match ? match[1] : '';
 
-                                    if (!inline && match) {
-                                        return (
-                                            <div
-                                                    className="relative group/code my-2 text-left max-w-full"
-                                                    onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <div className="flex items-center justify-between px-3 py-1.5 bg-[#2d2d2d] rounded-t-md border-b border-[#404040]">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex gap-1.5">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
-                                                            </div>
-                                                            <span className="text-xs text-gray-400 font-mono ml-2">{language}</span>
+                                            if (!inline && match) {
+                                                return (
+                                                    <div
+                                                            className="relative group/code my-2 text-left max-w-full"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <div className="flex items-center justify-between px-3 py-1.5 bg-[#2d2d2d] rounded-t-md border-b border-[#404040]">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="flex gap-1.5">
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></div>
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/80"></div>
+                                                                    </div>
+                                                                    <span className="text-xs text-gray-400 font-mono ml-2">{language}</span>
+                                                                </div>
                                                         </div>
-                                                </div>
-                                                <pre className={`!mt-0 !rounded-t-none overflow-x-auto ${className}`}>
-                                                    <code {...props} className={className}>
-                                                        {children}
-                                                    </code>
-                                                </pre>
-                                                <CodeCopyButton text={codeText} />
-                                                {(language === 'html' || language === 'svg') && (
-                                                    <CodeArtifact code={codeText} language={language} />
-                                                )}
-                                            </div>
-                                        );
-                                    }
-                                    return <code className={`break-words whitespace-pre-wrap ${className}`} {...props}>{children}</code>;
-                                },
-                                a: ({node, ...props}) => <a {...props} onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:underline break-all" target="_blank" rel="noopener noreferrer" />,
-                                p: ({node, ...props}) => <p {...props} className="break-words" />,
-                                ul: ({node, ...props}) => <ul {...props} className={`list-disc ${isMirrored ? 'pr-5' : 'pl-5'}`} />,
-                                ol: ({node, ...props}) => <ol {...props} className={`list-decimal ${isMirrored ? 'pr-5' : 'pl-5'}`} />,
-                                table: ({node, ...props}) => <div className="overflow-x-auto mb-4 border border-gray-200 dark:border-gray-700 rounded-lg"><table {...props} className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" /></div>,
-                            }}
-                        >
-                            {mainContent}
-                        </ReactMarkdown>
+                                                        <pre className={`!mt-0 !rounded-t-none overflow-x-auto ${className}`}>
+                                                            <code {...props} className={className}>
+                                                                {children}
+                                                            </code>
+                                                        </pre>
+                                                        <CodeCopyButton text={codeText} />
+                                                        {(language === 'html' || language === 'svg') && (
+                                                            <CodeArtifact code={codeText} language={language} />
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            return <code className={`break-words whitespace-pre-wrap ${className}`} {...props}>{children}</code>;
+                                        },
+                                        a: ({node, ...props}) => <a {...props} onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:underline break-all" target="_blank" rel="noopener noreferrer" />,
+                                        p: ({node, ...props}) => <p {...props} className="break-words" />,
+                                        ul: ({node, ...props}) => <ul {...props} className={`list-disc ${isMirrored ? 'pr-5' : 'pl-5'}`} />,
+                                        ol: ({node, ...props}) => <ol {...props} className={`list-decimal ${isMirrored ? 'pr-5' : 'pl-5'}`} />,
+                                        table: ({node, ...props}) => <div className="overflow-x-auto mb-4 border border-gray-200 dark:border-gray-700 rounded-lg"><table {...props} className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" /></div>,
+                                    }}
+                                >
+                                    {mainContent}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
                     </div>
                 )}
             
@@ -407,22 +361,87 @@ const MessageItemRaw: React.FC<{
             {message.attachments.map((att, idx) => {
               if (att.type === ContentType.IMAGE) {
                 return (
-                  <img 
-                    key={idx} 
-                    src={att.data} 
-                    alt="Generated" 
-                    className="max-w-full md:max-w-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm" 
-                  />
+                  <div key={idx} className="relative group">
+                    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-gray-100 dark:bg-gray-800">
+                      <img 
+                        src={att.data} 
+                        alt="Generated" 
+                        className="max-w-full md:max-w-sm object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const link = document.createElement('a');
+                          link.href = att.data;
+                          link.download = `generated-image-${Date.now()}.png`;
+                          link.click();
+                        }}
+                        className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors"
+                        title="下载图像"
+                      >
+                        <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(att.data, '_blank');
+                        }}
+                        className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors"
+                        title="全屏查看"
+                      >
+                        <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 );
               }
               if (att.type === ContentType.VIDEO) {
                 return (
-                  <video 
-                    key={idx} 
-                    src={att.data} 
-                    controls 
-                    className="max-w-full md:max-w-md rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-black"
-                  />
+                  <div key={idx} className="relative group">
+                    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-black">
+                      <video 
+                        src={att.data} 
+                        controls 
+                        className="max-w-full md:max-w-md w-full h-auto transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const link = document.createElement('a');
+                          link.href = att.data;
+                          link.download = `generated-video-${Date.now()}.mp4`;
+                          link.click();
+                        }}
+                        className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors"
+                        title="下载视频"
+                      >
+                        <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(att.data, '_blank');
+                        }}
+                        className="p-2 bg-white/90 hover:bg-white rounded-full transition-colors"
+                        title="全屏查看"
+                      >
+                        <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 );
               }
               return null;
