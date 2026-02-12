@@ -140,7 +140,7 @@ const RightSidebar: React.FC<Props> = ({
   }, [isOpen]);
 
   const [inputKey, setInputKey] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('google');
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('openrouter');
   const [customBaseUrl, setCustomBaseUrl] = useState('');
   const [showBaseUrlInput, setShowBaseUrlInput] = useState(false);
   const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
