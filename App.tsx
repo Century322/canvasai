@@ -812,9 +812,9 @@ export default function App() {
                     handleDropdownOpen();
                 }}
                 disabled={availableModels.length === 0}
-                className={`flex items-center justify-between w-full px-3 py-1.5 rounded-lg transition-colors group ${availableModels.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-[#2f2f2f]'}`}
+                className={`flex items-center justify-between w-full px-3 py-1.5 rounded-lg transition-colors group ${availableModels.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-                <span className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+                <span className="text-sm font-bold text-gray-800 dark:text-gray-100 group-hover:text-gray-900 dark:group-hover:text-white truncate">
                     {modelDef?.name || (availableModels.length > 0 ? "选择模型" : "暂无")}
                 </span>
                 <ChevronDownIcon className={`w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-transform ${isModelMenuOpen === side ? 'rotate-180' : ''}`} />
