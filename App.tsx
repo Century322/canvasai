@@ -12,6 +12,7 @@ import { INITIAL_SYSTEM_INSTRUCTION, DEFAULT_GENERATION_CONFIG } from './constan
 import { PanelLeftIcon, SplitScreenIcon, ChevronLeftIcon } from './components/Icons';
 import { DB } from './utils/db';
 import ModelSelector from './components/ModelSelector';
+import { Analytics } from '@vercel/analytics/react';
 
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const RightSidebar = lazy(() => import('./components/RightSidebar'));
@@ -676,6 +677,7 @@ export default function App() {
     <ErrorBoundary>
       <AppProvider>
         <AppContent />
+        <Analytics />
       </AppProvider>
     </ErrorBoundary>
   );
