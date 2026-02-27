@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Content, Part } from "@google/genai";
-import { Message, MessageRole, Attachment, ContentType, ModelCapability, ModelProvider, GenerationConfig } from "../types";
+import { Message, MessageRole, Attachment, ContentType, ModelCapability, ModelProvider, GenerationConfig, GroundingMetadata } from "../types";
 
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, _) => {
@@ -33,15 +33,14 @@ async function retry<T>(
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
-    } catch (error: any) {
-      lastError = error;
-      const errorMessage = error.message || error.toString();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = lastError.message;
       
-      // 检查是否是可重试的错误
       const isRetryable = retryableErrors.some(regex => regex.test(errorMessage));
       
       if (!isRetryable || i === maxRetries - 1) {
-        throw error;
+        throw lastError;
       }
       
       // 指数退避策略
@@ -64,10 +63,10 @@ export class GeminiService {
   }
 
   updateApiKey(apiKey: string, provider: ModelProvider = 'google', baseUrl?: string) {
-    this.apiKey = (apiKey || "").replace(/[^\x00-\x7F]/g, "").trim();
+    this.apiKey = (apiKey || "").replace(/[\u0080-\uFFFF]/g, "").trim();
     this.provider = provider;
     
-    let cleanUrl = (baseUrl || "").replace(/[^\x00-\x7F]/g, "").trim();
+    let cleanUrl = (baseUrl || "").replace(/[\u0080-\uFFFF]/g, "").trim();
     if (cleanUrl) {
         if (!cleanUrl.startsWith('http')) {
             cleanUrl = `https://${cleanUrl}`;
@@ -81,7 +80,7 @@ export class GeminiService {
     this.baseUrl = cleanUrl;
 
     if (this.provider === 'google' && this.apiKey) {
-      const options: any = { apiKey: this.apiKey };
+      const options: { apiKey: string; baseUrl?: string } = { apiKey: this.apiKey };
       if (this.baseUrl) {
           options.baseUrl = this.baseUrl;
       }
@@ -111,7 +110,7 @@ export class GeminiService {
         
         // 过滤和标记模型可用性
         result.models = this.filterAndMarkAvailableModels(result.models, this.provider);
-    } catch (e: any) {
+    } catch (e) {
         console.warn("Fetch models failed:", e);
         throw new Error(this.translateError(e));
     }
@@ -378,9 +377,9 @@ export class GeminiService {
     return { isPaid, paymentTier };
   }
 
-  private translateError(error: any): string {
-      const msg = (error.message || error.toString()).toLowerCase();
-      const originalMessage = error.message || error.toString();
+  private translateError(error: unknown): string {
+      const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
+      const originalMessage = error instanceof Error ? error.message : String(error);
 
       if (msg.includes('iso-8859-1') || msg.includes('headers')) {
           return "API Key 或 Base URL 包含非法字符（如中文、全角字符或控制符）。请使用纯英文格式输入。";
@@ -444,8 +443,8 @@ export class GeminiService {
           if (!data.models) return { models: [], platform: 'Google' };
 
           const models: ModelCapability[] = data.models
-              .filter((m: any) => m.name.includes('gemini') || m.name.includes('veo')) 
-              .map((m: any) => {
+              .filter((m: { name: string }) => m.name.includes('gemini') || m.name.includes('veo')) 
+              .map((m: { name: string; displayName?: string; description?: string; inputTokenLimit?: number; supportedGenerationMethods?: string[] }) => {
                   const id = m.name.replace('models/', '');
                   const supportsImages = m.inputTokenLimit > 0 && (m.supportedGenerationMethods?.includes('generateContent'));
                   const supportsVideoGen = id.includes('veo');
@@ -484,7 +483,7 @@ export class GeminiService {
           }
           
           const url = `${baseUrl}/models`;
-          const headers: any = { 'Authorization': `Bearer ${this.apiKey}` };
+          const headers: Record<string, string> = { 'Authorization': `Bearer ${this.apiKey}` };
           if (this.provider === 'anthropic') {
               headers['x-api-key'] = this.apiKey;
               headers['anthropic-version'] = '2023-06-01';
@@ -500,7 +499,7 @@ export class GeminiService {
           }
 
           const data = await response.json();
-          let rawModels: any[] = [];
+          let rawModels: { id: string; name?: string }[] = [];
           
           if (Array.isArray(data)) rawModels = data;
           else if (Array.isArray(data.data)) rawModels = data.data;
@@ -508,7 +507,7 @@ export class GeminiService {
           
           if (rawModels.length === 0) return { models: [], platform: 'Unknown' };
 
-          const models: ModelCapability[] = rawModels.map((m: any) => {
+          const models: ModelCapability[] = rawModels.map((m) => {
               const id = m.id;
               const lowerId = id.toLowerCase();
               const supportsImages = lowerId.includes('vision') || lowerId.includes('4o') || lowerId.includes('gemini') || lowerId.includes('claude-3') || lowerId.includes('llava') || lowerId.includes('vision') || lowerId.includes('multimodal');
@@ -582,7 +581,7 @@ export class GeminiService {
     history: Message[],
     systemInstruction: string | undefined,
     config: GenerationConfig,
-    onUpdate: (content: string, metadata?: any) => void,
+    onUpdate: (content: string, metadata?: GroundingMetadata) => void,
     signal?: AbortSignal
   ): Promise<void> {
 
@@ -619,7 +618,7 @@ export class GeminiService {
       history: Message[], 
       systemInstruction: string | undefined,
       config: GenerationConfig,
-      onUpdate: (content: string, metadata?: any) => void,
+      onUpdate: (content: string, metadata?: GroundingMetadata) => void,
       signal?: AbortSignal
   ) {
       if (!this.client) throw new Error("Google API 未初始化：请检查 API Key");
@@ -646,7 +645,7 @@ export class GeminiService {
       const previousContents = this.convertHistoryToGemini(prunedHistory);
 
       // Add Search Tool if enabled
-      const tools: any[] = [];
+      const tools: { googleSearch: Record<string, never> }[] = [];
       if (config.enableSearch) {
           tools.push({ googleSearch: {} });
       }
@@ -664,7 +663,7 @@ export class GeminiService {
       });
 
       let accumulatedText = "";
-      let accumulatedMetadata: any = null; // Store metadata as it arrives
+      let accumulatedMetadata: GroundingMetadata | null = null;
 
       for await (const chunk of result) {
             if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -690,7 +689,7 @@ export class GeminiService {
       history: Message[], 
       systemInstruction: string | undefined,
       config: GenerationConfig,
-      onUpdate: (content: string, metadata?: any) => void,
+      onUpdate: (content: string, metadata?: GroundingMetadata) => void,
       signal?: AbortSignal
   ) {
       let baseUrl = this.baseUrl;
@@ -700,7 +699,7 @@ export class GeminiService {
       }
 
       const endpoint = this.provider === 'anthropic' ? `${baseUrl}/messages` : `${baseUrl}/chat/completions`;
-      const apiMessages: any[] = [];
+      const apiMessages: { role: string; content: string | { type: string; text?: string; image_url?: { url: string } }[] }[] = [];
       
       if (systemInstruction && this.provider !== 'anthropic' && !modelId.includes('o1')) {
            apiMessages.push({ role: 'system', content: systemInstruction });
@@ -709,27 +708,23 @@ export class GeminiService {
       const prunedHistory = this.getPrunedHistory(history, config.historyLimit);
       const supportsVision = modelId.includes('vision') || modelId.includes('4o') || modelId.includes('claude') || modelId.includes('gemini') || modelId.includes('llava');
 
-      // Helper to process message content for OpenAI/OneAPI
-      const processContent = (text: string, atts?: Attachment[]) => {
-          // If no attachments, just text
+      const processContent = (text: string, atts?: Attachment[]): string | { type: string; text?: string; image_url?: { url: string } }[] => {
           if (!atts || atts.length === 0) return text;
           
-          const contentParts: any[] = [{ type: 'text', text: text || " " }];
+          const contentParts: { type: string; text?: string; image_url?: { url: string } }[] = [{ type: 'text', text: text || " " }];
           
           atts.forEach(att => {
-              // OpenAI standard only supports Images (base64 url)
               if (supportsVision && att.type === ContentType.IMAGE) {
                   contentParts.push({ 
                       type: 'image_url', 
                       image_url: { url: att.data } 
                   });
               } else {
-                  // Fallback for non-supported types (Video/Audio/PDF) on OpenAI API
                   console.warn(`Attachment type ${att.type} skipped for OpenAI provider.`);
               }
           });
           
-          if (contentParts.length === 1 && contentParts[0].type === 'text') return contentParts[0].text;
+          if (contentParts.length === 1 && contentParts[0].type === 'text') return contentParts[0].text || '';
           return contentParts;
       };
 
@@ -741,7 +736,15 @@ export class GeminiService {
 
       apiMessages.push({ role: 'user', content: processContent(currentInput, attachments) });
 
-      const body: any = {
+      const body: {
+          model: string;
+          messages: typeof apiMessages;
+          stream: boolean;
+          temperature: number;
+          top_p: number;
+          max_tokens?: number;
+          system?: string;
+      } = {
           model: modelId,
           messages: apiMessages,
           stream: true,
@@ -758,7 +761,7 @@ export class GeminiService {
           body.messages = apiMessages.filter(m => m.role !== 'system');
       }
 
-      const headers: any = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` };
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.apiKey}` };
       if (this.provider === 'anthropic') {
           headers['x-api-key'] = this.apiKey;
           headers['anthropic-version'] = '2023-06-01';

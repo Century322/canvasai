@@ -2,10 +2,10 @@
 import React, { useState, useRef } from 'react';
 import { ChatSession, KnowledgeFile, PromptPreset, Message, MessageRole } from '../types';
 import { 
-    NewChatIcon, TrashIcon, BookIcon, BotIcon, 
+    NewChatIcon, TrashIcon, BotIcon, 
     FileTextIcon, UploadIcon,
     ChevronLeftIcon, ChevronRightIcon,
-    XIcon, PlusIcon, MobiusIcon, DownloadIcon, EditIcon, SplitScreenIcon
+    XIcon, PlusIcon, DownloadIcon, EditIcon, SplitScreenIcon
 } from './Icons';
 
 interface Props {
@@ -172,11 +172,11 @@ const Sidebar: React.FC<Props> = ({
       URL.revokeObjectURL(url);
   };
 
-  const widthClass = isFullWidth ? 'w-full max-w-5xl' : 'w-[280px]';
+  const widthClass = isFullWidth ? 'w-full max-w-5xl' : 'w-[280px] max-w-[85vw]';
 
   // Dynamic grid classes based on expansion state
   const gridClass = isFullWidth 
-    ? 'grid-cols-2 lg:grid-cols-3 gap-3' 
+    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3' 
     : 'grid-cols-1 gap-2';
 
   return (
@@ -396,7 +396,7 @@ const Sidebar: React.FC<Props> = ({
                                                       <span className="text-[10px] text-gray-400 flex-shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
                                                       <div className="flex gap-2 flex-1">
                                                           <button
-                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide && onToggleKnowledgeSide(file.id, 'left'); }}
+                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide?.(file.id, 'left'); }}
                                                               className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.leftEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                                                               title="左侧/上方启用"
                                                           >
@@ -404,7 +404,7 @@ const Sidebar: React.FC<Props> = ({
                                                               <span className="md:hidden">上</span>
                                                           </button>
                                                           <button
-                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide && onToggleKnowledgeSide(file.id, 'right'); }}
+                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide?.(file.id, 'right'); }}
                                                               className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.rightEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                                                               title="右侧/下方启用"
                                                           >

@@ -19,6 +19,18 @@ export interface Attachment {
   preview?: string;
 }
 
+export interface GroundingChunk {
+  web?: {
+    uri?: string;
+    title?: string;
+  };
+}
+
+export interface GroundingMetadata {
+  groundingChunks?: GroundingChunk[];
+  webSearchQueries?: string[];
+}
+
 export interface Message {
   id: string;
   role: MessageRole;
@@ -27,10 +39,10 @@ export interface Message {
   timestamp: number;
   isError?: boolean;
   isBookmarked?: boolean; 
-  isHidden?: boolean; // New: For auto-battle silent relay
-  modelName?: string; // New: Persist the display name of the model
-  modelId?: string;   // New: Persist the ID of the model
-  groundingMetadata?: any; // New: Store Google Search grounding data
+  isHidden?: boolean;
+  modelName?: string;
+  modelId?: string;
+  groundingMetadata?: GroundingMetadata;
 }
 
 export interface ChatSession {

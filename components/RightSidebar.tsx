@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { SettingsIcon, ChevronDownIcon, ChevronUpIcon, KeyIcon, GoogleIcon, TrashIcon, OpenAIIcon, AnthropicIcon, ApiIcon, EditIcon, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, AlertTriangleIcon, GlobeIcon, FileTextIcon, ComputerIcon } from './Icons';
+import { SettingsIcon, ChevronDownIcon, ChevronUpIcon, KeyIcon, GoogleIcon, TrashIcon, OpenAIIcon, AnthropicIcon, ApiIcon, EditIcon, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, GlobeIcon } from './Icons';
 import { StoredKey, ModelProvider, ModelCapability, GenerationConfig } from '../types';
 import { API_PROVIDERS } from '../constants';
 import { GeminiService } from '../services/geminiService';
@@ -181,7 +181,7 @@ const RightSidebar: React.FC<Props> = ({
   };
 
   const handleVerifyAndAdd = async () => {
-      const cleanedKey = inputKey.replace(/[^\x00-\x7F]/g, "").trim();
+      const cleanedKey = inputKey.replace(/[\u0080-\uFFFF]/g, "").trim();
 
       if (!cleanedKey) {
           setVerifyError("请输入有效的 API Key (仅支持 ASCII 字符)");
@@ -217,9 +217,9 @@ const RightSidebar: React.FC<Props> = ({
           } else {
               setVerifyError('验证成功，但未发现可用模型。请检查 Key 权限或 Base URL。');
           }
-      } catch (e: any) {
+      } catch (e) {
           console.error(e);
-          setVerifyError(`验证出错: ${e.message}`);
+          setVerifyError(`验证出错: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
           setIsVerifying(false);
       }
@@ -232,7 +232,7 @@ const RightSidebar: React.FC<Props> = ({
             onClick={onClose}
         />
 
-        <div className={`fixed inset-y-0 right-0 z-50 w-[340px] bg-white dark:bg-[#212121] border-l border-gray-200 dark:border-[#2f2f2f] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed inset-y-0 right-0 z-50 w-[340px] max-w-[85vw] bg-white dark:bg-[#212121] border-l border-gray-200 dark:border-[#2f2f2f] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121]">
             <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">

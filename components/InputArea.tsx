@@ -3,6 +3,54 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { SendIcon, PlusIcon, MicIcon, StopIcon, ColumnsIcon, SwordsIcon, XIcon, ArrowLeftIcon, ArrowRightIcon, ArrowUpIcon, ArrowDownIcon, FileIcon } from './Icons';
 import { Attachment, ContentType, Message, MessageRole } from '../types';
 
+interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+    resultIndex: number;
+}
+
+interface SpeechRecognitionResultList {
+    length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+    length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    [index: number]: SpeechRecognitionAlternative;
+    isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+    transcript: string;
+    confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
+    message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    lang: string;
+    interimResults: boolean;
+    onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+    onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+    start(): void;
+    stop(): void;
+    abort(): void;
+}
+
+declare global {
+    interface Window {
+        SpeechRecognition: new () => SpeechRecognition;
+        webkitSpeechRecognition: new () => SpeechRecognition;
+    }
+}
+
 interface Props {
   onSendMessage: (text: string, attachments: Attachment[], target: 'left' | 'right' | 'both') => void;
   onStop: (target: 'left' | 'right') => void;
@@ -219,24 +267,23 @@ const InputArea: React.FC<Props> = ({
          recognition.interimResults = true; 
          
          recognition.onstart = () => isRight ? setIsRecordingRight(true) : setIsRecording(true);
-         recognition.onend = () => { setIsRecording(false); setIsRecordingRight(false); };
-         recognition.onerror = (event: any) => {
-             console.warn("Speech Recognition Error", event.error);
-             if (event.error === 'not-allowed') {
-                 alert("无法访问麦克风，请检查浏览器权限设置。");
-             }
-             setIsRecording(false);
-             setIsRecordingRight(false);
-         };
-         
-         const textBefore = isRight ? textRight : text;
-         recognition.onresult = (event: any) => {
-             const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join('');
-             // Simple logic: append to existing text
-             const newText = textBefore + (textBefore && transcript ? ' ' : '') + transcript;
-             if (isRight) setTextRight(newText);
-             else setText(newText);
-         };
+        recognition.onend = () => { setIsRecording(false); setIsRecordingRight(false); };
+        recognition.onerror = (event) => {
+            console.warn("Speech Recognition Error", event.error);
+            if (event.error === 'not-allowed') {
+                alert("无法访问麦克风，请检查浏览器权限设置。");
+            }
+            setIsRecording(false);
+            setIsRecordingRight(false);
+        };
+        
+        const textBefore = isRight ? textRight : text;
+        recognition.onresult = (event) => {
+            const transcript = Array.from(event.results).map((r) => r[0].transcript).join('');
+            const newText = textBefore + (textBefore && transcript ? ' ' : '') + transcript;
+            if (isRight) setTextRight(newText);
+            else setText(newText);
+        };
          recognition.start();
      } catch (e) {
          console.error(e);

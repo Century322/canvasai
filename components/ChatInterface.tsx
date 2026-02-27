@@ -1,13 +1,14 @@
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeHighlight from 'rehype-highlight';
 import DOMPurify from 'dompurify';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'; // Virtualization
-import { Message, MessageRole, ContentType } from '../types';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { Message, MessageRole, ContentType, GroundingMetadata } from '../types';
 import { BotIcon, UserIcon, CheckIcon, CopyIcon, RefreshIcon, EditIcon, SpeakerIcon, CodeIcon, StarIcon, EyeIcon, MobiusIcon, AlertTriangleIcon, BrainIcon, ChevronDownIcon, ChevronUpIcon, ArrowCollapseIcon, ArrowDownIcon, GlobeIcon, SearchIcon } from './Icons';
 
 interface Props {
@@ -72,7 +73,7 @@ const CodeCopyButton = ({ text }: { text: string }) => {
 
 
 
-const GroundingSources = ({ metadata }: { metadata: any }) => {
+const GroundingSources = ({ metadata }: { metadata: GroundingMetadata }) => {
     if (!metadata?.groundingChunks || metadata.groundingChunks.length === 0) return null;
 
     return (
@@ -82,8 +83,8 @@ const GroundingSources = ({ metadata }: { metadata: any }) => {
                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">参考来源</span>
              </div>
              <div className="flex flex-wrap gap-2">
-                 {metadata.groundingChunks.map((chunk: any, idx: number) => {
-                     if (chunk.web) {
+                 {metadata.groundingChunks.map((chunk, idx: number) => {
+                     if (chunk.web?.uri) {
                          return (
                              <a 
                                 key={idx} 
@@ -293,10 +294,11 @@ const MessageItemRaw: React.FC<{
                                     remarkPlugins={[remarkGfm, remarkMath]}
                                     rehypePlugins={[rehypeKatex, rehypeHighlight]}
                                     components={{
-                                        code({node, inline, className, children, ...props}: any) {
+                                        code({className, children, ...props}) {
                                             const match = /language-(\w+)/.exec(className || '');
                                             const codeText = String(children).replace(/\n$/, '');
                                             const language = match ? match[1] : '';
+                                            const inline = !match;
 
                                             if (!inline && match) {
                                                 return (
@@ -525,17 +527,50 @@ const ChatInterface: React.FC<Props> = ({
   isSplitScreen
 }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const [showScrollButton, setShowScrollButton] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [showScrollUp, setShowScrollUp] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isTapped, setIsTapped] = useState(false);
 
-  // Auto-scroll logic with Virtuoso
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   useEffect(() => {
       if (isAtBottom && messages.length > 0) {
           virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' });
       }
   }, [messages.length, messages[messages.length - 1]?.content, isLoading, isAtBottom]); 
 
-  // Empty State
+  const handleScroll = useCallback(() => {
+      setIsScrolling(true);
+      setIsTapped(false);
+      if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+          setIsScrolling(false);
+      }, 300);
+  }, []);
+
+  const handleContainerClick = useCallback(() => {
+      if (isMobile) {
+          setIsTapped(true);
+          setTimeout(() => setIsTapped(false), 2000);
+      }
+  }, [isMobile]);
+
+  const shouldShowButtons = !isScrolling && (isMobile ? isTapped : isHovering);
+
+  useEffect(() => {
+      return () => {
+          if (scrollTimeoutRef.current) {
+              clearTimeout(scrollTimeoutRef.current);
+          }
+      };
+  }, []);
+
   if (messages.length === 0) {
       return (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center opacity-20 select-none p-4">
@@ -548,37 +583,48 @@ const ChatInterface: React.FC<Props> = ({
   }
 
   return (
-    <div className="relative flex-1 min-h-0 flex flex-col">
+    <div 
+        className="relative flex-1 min-h-0 flex flex-col"
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        onClick={handleContainerClick}
+    >
         <Virtuoso
             ref={virtuosoRef}
             data={messages}
             totalCount={messages.length}
             className="flex-1 custom-scrollbar"
+            onScroll={handleScroll}
             atBottomStateChange={(atBottom) => {
                 setIsAtBottom(atBottom);
-                setShowScrollButton(!atBottom);
+                setShowScrollDown(!atBottom);
+            }}
+            atTopStateChange={(atTop) => {
+                setShowScrollUp(!atTop);
             }}
             atBottomThreshold={50}
             initialTopMostItemIndex={messages.length - 1}
             itemContent={(index, msg) => (
                 <div className="px-4 py-1">
-                    <MessageItem 
-                        key={msg.id} 
-                        message={msg} 
-                        isLast={index === messages.length - 1} 
-                        onRegenerate={onRegenerate}
-                        onEdit={onEditMessage}
-                        onBookmark={onBookmark}
-                        isMirrored={isMirrored}
-                        modelName={modelName}
-                    />
+                    <div className={`${isSplitScreen ? '' : 'mx-auto max-w-3xl'}`}>
+                        <MessageItem 
+                            key={msg.id} 
+                            message={msg} 
+                            isLast={index === messages.length - 1} 
+                            onRegenerate={onRegenerate}
+                            onEdit={onEditMessage}
+                            onBookmark={onBookmark}
+                            isMirrored={isMirrored}
+                            modelName={modelName}
+                        />
+                    </div>
                 </div>
             )}
             components={{
                 Footer: () => (
                     isLoading ? (
-                        <div className={`flex w-full mb-6 px-4 ${isMirrored ? 'justify-end pl-10' : 'justify-start pr-10'}`}>
-                            <div className={`flex items-center gap-1 mt-3 ${isMirrored ? 'mr-12' : 'ml-12'}`}>
+                        <div className={`flex w-full mb-6 px-4 ${isSplitScreen ? (isMirrored ? 'justify-end pl-10' : 'justify-start pr-10') : 'justify-center'}`}>
+                            <div className={`flex items-center gap-1 mt-3 ${isSplitScreen ? (isMirrored ? 'mr-12' : 'ml-12') : ''}`}>
                                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                 <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
@@ -589,17 +635,30 @@ const ChatInterface: React.FC<Props> = ({
             }}
         />
         
-        {/* Floating Scroll Down Button */}
-        {showScrollButton && (
-            <div className="absolute bottom-6 right-6 z-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {showScrollUp && shouldShowButtons && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        virtuosoRef.current?.scrollToIndex({ index: 0, align: 'start', behavior: 'smooth' });
+                    }}
+                    className="p-2 md:p-2.5 rounded-full bg-white/90 dark:bg-[#333]/90 shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#404040] transition-colors backdrop-blur-sm"
+                >
+                    <ChevronUpIcon className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+            </div>
+        )}
+        
+        {showScrollDown && shouldShowButtons && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
                         virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' });
                     }}
-                    className="p-2.5 rounded-full bg-white dark:bg-[#333] shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#404040] transition-colors"
+                    className="p-2 md:p-2.5 rounded-full bg-white/90 dark:bg-[#333]/90 shadow-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#404040] transition-colors backdrop-blur-sm"
                 >
-                    <ArrowDownIcon className="w-5 h-5" />
+                    <ChevronDownIcon className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
             </div>
         )}

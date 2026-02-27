@@ -1,8 +1,6 @@
 
-import { GenerationConfig, PromptPreset, ModelProvider, ModelCapability } from './types';
+import { GenerationConfig, ModelProvider } from './types';
 
-// Provider Definitions for UI Dropdown and Auto-fill
-// Base URLs must point to the root of the OpenAI compatible endpoint (usually without /chat/completions)
 export const API_PROVIDERS: { id: ModelProvider; name: string; baseUrl: string; icon?: string }[] = [
     { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
     { id: 'custom', name: 'OneAPI / 自定义', baseUrl: '' },

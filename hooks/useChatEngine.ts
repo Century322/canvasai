@@ -174,8 +174,8 @@ export const useChatEngine = ({
         },
         abortControllerRef.current.signal
       );
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
          onUpdateMessages(messagesWithBot.map(m => 
             m.id === botMsgId ? { ...m, isError: true, content: error.message || "生成出错" } : m
          ));
