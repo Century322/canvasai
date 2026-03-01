@@ -492,8 +492,13 @@ async function streamViaProxy(
               accumulatedText += delta.content;
             }
             
-            onUpdate(accumulatedText);
+            // MiniMax 特殊处理：检查 reply 字段
+            if (provider === 'minimax' && data.choices?.[0]?.reply) {
+              accumulatedText += data.choices[0].reply;
+            }
           }
+          
+          onUpdate(accumulatedText);
         } catch (e) {}
       }
     }
