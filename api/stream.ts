@@ -40,44 +40,81 @@ export default async function handler(req: Request) {
     });
   }
 
+  let requestBody: {
+    provider: string;
+    endpoint: string;
+    apiKey: string;
+    body: any;
+  };
+
   try {
-    const { provider, endpoint, apiKey, body } = await req.json();
+    requestBody = await req.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
 
-    if (!provider || !endpoint || !apiKey) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+  const { provider, endpoint, apiKey, body } = requestBody;
 
-    const providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS.openai;
-    let url = `${providerConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  if (!provider || !endpoint || !apiKey) {
+    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
+  }
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+  const providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS.openai;
+  let url = `${providerConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
-    if (provider === 'anthropic') {
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-    } else if (provider === 'google') {
-      const separator = url.includes('?') ? '&' : '?';
-      url = `${url}${separator}key=${apiKey}`;
-    } else {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'text/event-stream',
+  };
+
+  if (provider === 'anthropic') {
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+  } else if (provider === 'google') {
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}key=${apiKey}`;
+  } else {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  if (provider === 'openrouter') {
+    headers['HTTP-Referer'] = 'https://www.dygc.top';
+    headers['X-Title'] = 'Canvas AI Chat';
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const contentType = response.headers.get('content-type') || 'application/json';
 
     if (!response.ok) {
-      const errorText = await response.text();
-      return new Response(JSON.stringify({ error: errorText || `HTTP ${response.status}` }), {
+      let errorText: string;
+      try {
+        const errorJson = await response.json();
+        errorText = JSON.stringify(errorJson);
+      } catch {
+        errorText = await response.text();
+      }
+      return new Response(JSON.stringify({ 
+        error: errorText || `HTTP ${response.status}`,
+        status: response.status 
+      }), {
         status: response.status,
         headers: {
           'Content-Type': 'application/json',
@@ -107,9 +144,20 @@ export default async function handler(req: Request) {
       },
     });
   } catch (error) {
-    console.error('API Proxy Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (errorMessage.includes('abort')) {
+      return new Response(JSON.stringify({ error: 'Request timeout (25s)' }), {
+        status: 504,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Internal server error'
+      error: errorMessage
     }), {
       status: 500,
       headers: {
