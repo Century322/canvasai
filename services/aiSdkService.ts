@@ -487,7 +487,7 @@ async function streamViaProxy(
           } else {
             const delta = data.choices?.[0]?.delta;
             if (delta?.reasoning_content) {
-              accumulatedText += `hed{delta.reasoning_content}ink`;
+              accumulatedText += delta.reasoning_content;
             } else if (delta?.content) {
               accumulatedText += delta.content;
             }
