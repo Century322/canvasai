@@ -491,9 +491,9 @@ async function streamViaProxy(
             } else if (delta?.content) {
               accumulatedText += delta.content;
             }
+            
+            onUpdate(accumulatedText);
           }
-          
-          onUpdate(accumulatedText);
         } catch (e) {}
       }
     }
