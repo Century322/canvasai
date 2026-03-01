@@ -2,28 +2,37 @@
 import { ChatSession } from "../types";
 
 const DB_NAME = 'CanvasDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'sessions';
+const META_STORE_NAME = 'metadata';
 
-// Helper to open DB
 const openDB = (): Promise<IDBDatabase> => {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
+        
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            const oldVersion = event.oldVersion;
+            
+            if (oldVersion < 1) {
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                }
+            }
+            
+            if (oldVersion < 2) {
+                if (!db.objectStoreNames.contains(META_STORE_NAME)) {
+                    db.createObjectStore(META_STORE_NAME, { keyPath: 'key' });
+                }
             }
         };
+        
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
 };
 
 export const DB = {
-    // Fetches all sessions but meant for summary (logic handled in App to strip content)
-    // Note: IDB 'getAll' fetches everything, real IO optimization would require a separate metadata store.
-    // However, we optimize the memory usage in React State by stripping data after fetch.
     async getAllSessions(): Promise<ChatSession[]> {
         try {
             const db = await openDB();
@@ -32,7 +41,6 @@ export const DB = {
                 const store = transaction.objectStore(STORE_NAME);
                 const request = store.getAll();
                 request.onsuccess = () => {
-                    // Sort by timestamp desc
                     const sessions = (request.result as ChatSession[]) || [];
                     resolve(sessions.sort((a, b) => b.timestamp - a.timestamp));
                 };
@@ -92,7 +100,6 @@ export const DB = {
 
     async clearAllSessions(): Promise<void> {
         try {
-            // 清除 IndexedDB
             const db = await openDB();
             await new Promise<void>((resolve, reject) => {
                 const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -102,16 +109,75 @@ export const DB = {
                 request.onerror = () => reject(request.error);
             });
             
-            // 清除 localStorage 中的自动保存数据
             localStorage.removeItem('gemini_auto_save');
-            
-            // 清除其他对话相关数据（保留设置类数据）
-            // 保留：gemini_stored_keys (API Key), gemini_theme (主题), gemini_model_id (模型选择)
-            // 保留：gemini_right_model_id, gemini_gen_config, gemini_custom_prompts
             localStorage.removeItem('gemini_current_session_id');
         } catch (e) {
             console.error("DB Clear Error", e);
             throw e;
+        }
+    },
+
+    async getMetadata(key: string): Promise<string | undefined> {
+        try {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(META_STORE_NAME, 'readonly');
+                const store = transaction.objectStore(META_STORE_NAME);
+                const request = store.get(key);
+                request.onsuccess = () => {
+                    const result = request.result as { key: string; value: string } | undefined;
+                    resolve(result?.value);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        } catch {
+            return undefined;
+        }
+    },
+
+    async setMetadata(key: string, value: string): Promise<void> {
+        try {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(META_STORE_NAME, 'readwrite');
+                const store = transaction.objectStore(META_STORE_NAME);
+                const request = store.put({ key, value });
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        } catch (e) {
+            console.error("DB Set Metadata Error", e);
+        }
+    },
+
+    async exportData(): Promise<string> {
+        const sessions = await this.getAllSessions();
+        const data = {
+            version: DB_VERSION,
+            exportDate: new Date().toISOString(),
+            sessions
+        };
+        return JSON.stringify(data, null, 2);
+    },
+
+    async importData(jsonData: string): Promise<{ success: boolean; count: number; error?: string }> {
+        try {
+            const data = JSON.parse(jsonData);
+            if (!data.sessions || !Array.isArray(data.sessions)) {
+                return { success: false, count: 0, error: '无效的数据格式' };
+            }
+            
+            let count = 0;
+            for (const session of data.sessions) {
+                if (session.id && session.messages) {
+                    await this.saveSession(session);
+                    count++;
+                }
+            }
+            
+            return { success: true, count };
+        } catch (e) {
+            return { success: false, count: 0, error: String(e) };
         }
     }
 };

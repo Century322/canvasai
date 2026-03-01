@@ -7,11 +7,13 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import { useSessionManager } from './hooks/useSessionManager';
 import { useAutoSave } from './hooks/useAutoSave';
 import { useTheme } from './hooks/useTheme';
-import { Message, MessageRole, Attachment, PromptPreset, KnowledgeFile, StoredKey } from './types';
+import { MessageRole, Attachment, StoredKey, ModelCapability } from './types';
 import { INITIAL_SYSTEM_INSTRUCTION, DEFAULT_GENERATION_CONFIG } from './constants';
 import { PanelLeftIcon, SplitScreenIcon, ChevronLeftIcon } from './components/Icons';
 import { DB } from './utils/db';
 import ModelSelector from './components/ModelSelector';
+import { getProviderById } from './constants/models';
+import { aiSdkService } from './services/aiSdkService';
 
 const Sidebar = lazy(() => import('./components/Sidebar'));
 const RightSidebar = lazy(() => import('./components/RightSidebar'));
@@ -25,8 +27,8 @@ const LoadingFallback: React.FC = () => (
 const AppContent: React.FC = () => {
   const {
     isIncognito, setIsIncognito, isIncognitoRef,
-    leftSystemInstruction, setLeftSystemInstruction, leftSystemInstructionRef,
-    rightSystemInstruction, setRightSystemInstruction, rightSystemInstructionRef,
+    leftSystemInstructionRef, setLeftSystemInstruction,
+    rightSystemInstructionRef, setRightSystemInstruction,
     generationConfig, setGenerationConfig,
     customPrompts, setCustomPrompts,
     knowledgeFiles, setKnowledgeFiles,
@@ -41,7 +43,9 @@ const AppContent: React.FC = () => {
     isAutoBattle, setIsAutoBattle,
     isSidebarOpen, setIsSidebarOpen,
     isRightSidebarOpen, setIsRightSidebarOpen,
-    targetRightSidebarTrigger, setTargetRightSidebarTrigger
+    targetRightSidebarTrigger, setTargetRightSidebarTrigger,
+    userTools, setUserTools,
+    enabledTools, setEnabledTools
   } = useAppContext();
 
   const {
@@ -51,7 +55,7 @@ const AppContent: React.FC = () => {
     rightMessages, setRightMessages,
     hasUnsavedContent, setHasUnsavedContent,
     sessionsRef, currentSessionIdRef, messagesRef, rightMessagesRef,
-    loadSessions, createNewSession, switchSession, deleteSession, clearAllHistory,
+    loadSessions, createNewSession, switchSession, clearAllHistory,
     realtimeUpdateSession
   } = useSessionManager({
     isIncognitoRef,
@@ -119,14 +123,29 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (activeKeyObject) {
       geminiService.updateApiKey(activeKeyObject.key, activeKeyObject.provider, activeKeyObject.baseUrl);
+      aiSdkService.updateConfig(activeKeyObject.key, activeKeyObject.provider, activeKeyObject.baseUrl || undefined);
     } else {
       geminiService.updateApiKey('', 'google');
+      aiSdkService.updateConfig('', 'vercel');
     }
     
-    const syncModels = async () => {
+    const syncModels = () => {
       if (activeKeyObject) {
-        try {
-          const { models } = await geminiService.getAvailableModels();
+        const providerConfig = getProviderById(activeKeyObject.provider);
+        if (providerConfig && providerConfig.models.length > 0) {
+          const models: ModelCapability[] = providerConfig.models.map(m => ({
+            id: m.id,
+            name: m.name,
+            provider: activeKeyObject.provider,
+            description: m.description || '',
+            supportsImages: m.supportsImages || false,
+            supportsVideoGen: m.supportsVideo || false,
+            supportsAudio: m.supportsAudio || false,
+            isThinking: m.isThinking || false,
+            isOnline: false,
+            contextWindow: m.contextWindow || '',
+            isFree: !m.isPaid,
+          }));
           setAvailableModels(models);
           
           if (!currentModelId || !models.find(m => m.id === currentModelId)) {
@@ -145,10 +164,9 @@ const AppContent: React.FC = () => {
               setRightModelId(models.length > 0 ? (models[1]?.id || models[0].id) : "");
             }
           }
-        } catch (e) {
+        } else {
           setAvailableModels([]);
           setCurrentModelId("");
-          showToast(`模型列表更新失败: ${e instanceof Error ? e.message : String(e)}`, 'error');
         }
       } else {
         setAvailableModels([]);
@@ -165,6 +183,7 @@ const AppContent: React.FC = () => {
       }, 500);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [activeKeyObject]);
 
   const handleSendMessage = useCallback(async (text: string, attachments: Attachment[], target: 'left' | 'right' | 'both', forceHidden?: boolean) => {
@@ -194,7 +213,7 @@ const AppContent: React.FC = () => {
 
     await Promise.all(promises);
     await realtimeUpdateSession();
-  }, [isSplitScreen, currentModelId, rightModelId, leftEngine, rightEngine, realtimeUpdateSession, showToast, setHasUnsavedContent, currentModelId, rightModelId]);
+  }, [isSplitScreen, currentModelId, rightModelId, leftEngine, rightEngine, realtimeUpdateSession, showToast, setHasUnsavedContent]);
 
   const handleManualRelay = useCallback((direction: 'left_to_right' | 'right_to_left') => {
     if (leftEngine.isLoading || rightEngine.isLoading) return;
@@ -665,6 +684,10 @@ const AppContent: React.FC = () => {
           isIncognito={isIncognito}
           onToggleIncognito={() => setIsIncognito(!isIncognito)}
           theme={isIncognito ? 'dark' : 'light'}
+          userTools={userTools}
+          setUserTools={setUserTools}
+          enabledTools={enabledTools}
+          setEnabledTools={setEnabledTools}
         />
       </Suspense>
     </div>

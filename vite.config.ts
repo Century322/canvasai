@@ -9,6 +9,73 @@ export default defineConfig(({ mode }) => {
         server: {
             port: 3000,
             host: '0.0.0.0',
+            proxy: {
+                '/api/vercel': {
+                    target: 'https://gateway.ai.vercel.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/vercel/, '/v1'),
+                },
+                '/api/alibaba': {
+                    target: 'https://dashscope.aliyuncs.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/alibaba/, '/compatible-mode/v1'),
+                },
+                '/api/xai': {
+                    target: 'https://api.x.ai',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/xai/, '/v1'),
+                },
+                '/api/openai': {
+                    target: 'https://api.openai.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/openai/, '/v1'),
+                },
+                '/api/anthropic': {
+                    target: 'https://api.anthropic.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/anthropic/, '/v1'),
+                },
+                '/api/deepseek': {
+                    target: 'https://api.deepseek.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/deepseek/, '/v1'),
+                },
+                '/api/mistral': {
+                    target: 'https://api.mistral.ai',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/mistral/, '/v1'),
+                },
+                '/api/perplexity': {
+                    target: 'https://api.perplexity.ai',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/perplexity/, ''),
+                },
+                '/api/cohere': {
+                    target: 'https://api.cohere.ai',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/cohere/, '/compatibility/v1'),
+                },
+                '/api/openrouter': {
+                    target: 'https://openrouter.ai',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/openrouter/, '/api/v1'),
+                },
+                '/api/moonshot': {
+                    target: 'https://api.moonshot.cn',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/moonshot/, '/v1'),
+                },
+                '/api/zhipu': {
+                    target: 'https://open.bigmodel.cn',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/zhipu/, '/api/paas/v4'),
+                },
+                '/api/google': {
+                    target: 'https://generativelanguage.googleapis.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/google/, '/v1beta'),
+                },
+            },
         },
         plugins: [
             react(),
@@ -20,7 +87,7 @@ export default defineConfig(({ mode }) => {
         },
         resolve: {
             alias: {
-                '@': path.resolve(__dirname, './src'),
+                '@': path.resolve(__dirname, '.'),
             }
         },
         build: {
@@ -44,8 +111,8 @@ export default defineConfig(({ mode }) => {
         test: {
             globals: true,
             environment: 'jsdom',
-            setupFiles: ['./src/test/setup.ts'],
-            include: ['src/**/*.{test,spec}.{js,ts,tsx}'],
+            setupFiles: ['./test/setup.ts'],
+            include: ['**/*.{test,spec}.{js,ts,tsx}'],
             coverage: {
                 provider: 'v8',
                 reporter: ['text', 'json', 'html'],

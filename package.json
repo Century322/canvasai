@@ -16,7 +16,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.50",
+    "@ai-sdk/openai": "^3.0.37",
+    "@ai-sdk/openai-compatible": "^2.0.31",
+    "@ai-sdk/xai": "^3.0.60",
     "@google/genai": "^1.39.0",
+    "ai": "^6.0.105",
     "dompurify": "^3.3.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -25,7 +30,8 @@
     "rehype-highlight": "7",
     "rehype-katex": "7",
     "remark-gfm": "4",
-    "remark-math": "6"
+    "remark-math": "6",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -33,6 +39,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.14.0",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "@vitejs/plugin-react": "^5.0.0",

@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { SettingsIcon, ChevronDownIcon, ChevronUpIcon, KeyIcon, GoogleIcon, TrashIcon, OpenAIIcon, AnthropicIcon, ApiIcon, EditIcon, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, GlobeIcon } from './Icons';
-import { StoredKey, ModelProvider, ModelCapability, GenerationConfig } from '../types';
-import { API_PROVIDERS } from '../constants';
-import { GeminiService } from '../services/geminiService';
+import { SettingsIcon, ChevronDownIcon, ChevronUpIcon, KeyIcon, GoogleIcon, TrashIcon, OpenAIIcon, AnthropicIcon, ApiIcon, EditIcon, EyeIcon, EyeOffIcon, SunIcon, MoonIcon, GlobeIcon, WrenchIcon, PlusIcon } from './Icons';
+import { StoredKey, ModelProvider, ModelCapability, GenerationConfig, UserTool } from '../types';
+import { API_PROVIDERS, BUILT_IN_TOOLS } from '../constants';
+import { AISDKService } from '../services/aiSdkService';
+import { getProviderById } from '../constants/models';
 import { DB } from '../utils/db';
 
 interface Props {
@@ -21,6 +22,10 @@ interface Props {
   isIncognito: boolean;
   onToggleIncognito: () => void;
   theme: 'light' | 'dark' | 'system';
+  userTools: UserTool[];
+  setUserTools: React.Dispatch<React.SetStateAction<UserTool[]>>;
+  enabledTools: string[];
+  setEnabledTools: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const AccordionItem: React.FC<{
@@ -79,14 +84,18 @@ const RightSidebar: React.FC<Props> = ({
   targetSectionTrigger,
   isIncognito,
   onToggleIncognito,
-  theme
+  theme,
+  userTools,
+  setUserTools,
+  enabledTools,
+  setEnabledTools
 }) => {
   const modelDef = availableModels.find(m => m.id === currentModelId);
 
-  // 使用 useMemo 计算 openSections 的值，确保每次 targetSectionTrigger 变化时都会更新
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
       'keys': false,
       'model': false,
+      'tools': false,
       'app': false
   });
 
@@ -193,11 +202,14 @@ const RightSidebar: React.FC<Props> = ({
       setSuccessMsg('');
 
       try {
-          const service = new GeminiService(cleanedKey, selectedProvider, customBaseUrl);
-          const { models, platform, balance } = await service.getAvailableModels();
+          const service = new AISDKService(cleanedKey, selectedProvider, customBaseUrl || undefined);
+          const { valid, message } = await service.validateKey(cleanedKey, selectedProvider, customBaseUrl || undefined);
 
-          if (models.length > 0) {
-              const providerName = API_PROVIDERS.find(p => p.id === selectedProvider)?.name || platform;
+          if (valid) {
+              const providerName = API_PROVIDERS.find(p => p.id === selectedProvider)?.name || selectedProvider;
+              const providerConfig = getProviderById(selectedProvider);
+              const modelCount = providerConfig?.models.length || 0;
+              
               const newKey: StoredKey = {
                   id: editingKeyId || crypto.randomUUID(), 
                   alias: `${providerName}`,
@@ -206,16 +218,16 @@ const RightSidebar: React.FC<Props> = ({
                   baseUrl: customBaseUrl,
                   isEnabled: true, 
                   timestamp: Date.now(),
-                  balance: balance 
+                  balance: undefined 
               };
               onAddKey(newKey);
               
               setInputKey('');
               setEditingKeyId(null);
-              setSuccessMsg(`验证成功! 已发现 ${models.length} 个模型。`);
+              setSuccessMsg(`验证成功! ${modelCount > 0 ? `支持 ${modelCount} 个模型` : ''}`);
               setTimeout(() => setSuccessMsg(''), 3000);
           } else {
-              setVerifyError('验证成功，但未发现可用模型。请检查 Key 权限或 Base URL。');
+              setVerifyError(`验证失败: ${message}`);
           }
       } catch (e) {
           console.error(e);
@@ -414,7 +426,103 @@ const RightSidebar: React.FC<Props> = ({
                 )}
             </AccordionItem>
 
+            <AccordionItem
+                title="工具调用"
+                icon={<WrenchIcon className="w-4 h-4" />}
+                isOpen={openSections['tools']}
+                onToggle={() => toggleSection('tools')}
+            >
+                <div className="space-y-3">
+                    <div className="text-xs text-gray-500 mb-2">
+                        启用后，AI 可以自主决定调用这些工具来完成任务
+                    </div>
 
+                    <div className="space-y-2">
+                        <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider ml-1">内置工具</div>
+                        {BUILT_IN_TOOLS.map(tool => (
+                            <div 
+                                key={tool.id}
+                                className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]"
+                            >
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{tool.name}</span>
+                                    <span className="text-[9px] text-gray-400">{tool.description}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEnabledTools(prev => 
+                                            prev.includes(tool.id) 
+                                                ? prev.filter(id => id !== tool.id)
+                                                : [...prev, tool.id]
+                                        );
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                                        enabledTools.includes(tool.id) ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
+                                    }`}
+                                >
+                                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                                        enabledTools.includes(tool.id) ? 'translate-x-4' : 'translate-x-1'
+                                    }`} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    {userTools.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-[#333]">
+                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider ml-1">自定义工具</div>
+                            {userTools.map(tool => (
+                                <div 
+                                    key={tool.id}
+                                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-[#2a2a2a] rounded-lg border border-gray-100 dark:border-[#333]"
+                                >
+                                    <div className="flex flex-col flex-1 min-w-0">
+                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{tool.name}</span>
+                                        <span className="text-[9px] text-gray-400 truncate">{tool.description}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEnabledTools(prev => 
+                                                    prev.includes(tool.id) 
+                                                        ? prev.filter(id => id !== tool.id)
+                                                        : [...prev, tool.id]
+                                                );
+                                            }}
+                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                                                enabledTools.includes(tool.id) ? 'bg-green-600' : 'bg-gray-200 dark:bg-gray-600'
+                                            }`}
+                                        >
+                                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                                                enabledTools.includes(tool.id) ? 'translate-x-4' : 'translate-x-1'
+                                            }`} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUserTools(prev => {
+                                                    const updated = prev.filter(t => t.id !== tool.id);
+                                                    localStorage.setItem('gemini_user_tools', JSON.stringify(updated));
+                                                    return updated;
+                                                });
+                                            }}
+                                            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <TrashIcon className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="text-[9px] text-gray-400 leading-relaxed pt-2 border-t border-gray-100 dark:border-[#333]">
+                        提示：自定义工具功能即将推出，敬请期待！
+                    </div>
+                </div>
+            </AccordionItem>
 
             <AccordionItem
                 title="应用设置"

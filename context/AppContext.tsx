@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { StoredKey, ModelCapability, GenerationConfig, PromptPreset, KnowledgeFile, ToastNotification } from '../types';
+import { StoredKey, ModelCapability, GenerationConfig, PromptPreset, KnowledgeFile, ToastNotification, UserTool } from '../types';
 import { INITIAL_SYSTEM_INSTRUCTION, DEFAULT_GENERATION_CONFIG } from '../constants';
 import { GeminiService } from '../services/geminiService';
 import { useChatEngine } from '../hooks/useChatEngine';
+import { AISDKService, aiSdkService, builtInTools } from '../services/aiSdkService';
+import { MODEL_PROVIDERS, getAllModels } from '../constants/models';
 
 interface AppContextType {
   isIncognito: boolean;
@@ -39,6 +41,7 @@ interface AppContextType {
   setStoredKeys: React.Dispatch<React.SetStateAction<StoredKey[]>>;
   
   geminiService: GeminiService;
+  aiSdkService: AISDKService;
   
   leftEngine: ReturnType<typeof useChatEngine>;
   rightEngine: ReturnType<typeof useChatEngine>;
@@ -61,6 +64,14 @@ interface AppContextType {
   
   targetRightSidebarTrigger: { section: string, timestamp: number } | null;
   setTargetRightSidebarTrigger: (val: { section: string, timestamp: number } | null) => void;
+
+  userTools: UserTool[];
+  setUserTools: React.Dispatch<React.SetStateAction<UserTool[]>>;
+  
+  enabledTools: string[];
+  setEnabledTools: React.Dispatch<React.SetStateAction<string[]>>;
+  
+  builtInToolNames: string[];
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -101,20 +112,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [targetRightSidebarTrigger, setTargetRightSidebarTrigger] = useState<{ section: string, timestamp: number } | null>(null);
 
+  const [userTools, setUserTools] = useState<UserTool[]>([]);
+  const [enabledTools, setEnabledTools] = useState<string[]>(['weather', 'calculator', 'datetime']);
+  const builtInToolNames = Object.keys(builtInTools);
+
   const [geminiService] = useState(() => new GeminiService(''));
+  
+  const activeKeyObject = storedKeys.find(k => k.isEnabled);
+  const activeProvider = activeKeyObject?.provider || 'google';
 
   const leftEngine = useChatEngine({
     geminiService,
+    aiSdkService,
     generationConfig,
     systemInstruction: leftSystemInstruction,
-    knowledgeFiles
+    knowledgeFiles,
+    enabledTools,
+    userTools,
+    activeProvider
   });
 
   const rightEngine = useChatEngine({
     geminiService,
+    aiSdkService,
     generationConfig,
     systemInstruction: rightSystemInstruction,
-    knowledgeFiles
+    knowledgeFiles,
+    enabledTools,
+    userTools,
+    activeProvider
   });
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -153,6 +179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storedKeys,
     setStoredKeys,
     geminiService,
+    aiSdkService,
     leftEngine,
     rightEngine,
     toasts,
@@ -167,7 +194,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isRightSidebarOpen,
     setIsRightSidebarOpen,
     targetRightSidebarTrigger,
-    setTargetRightSidebarTrigger
+    setTargetRightSidebarTrigger,
+    userTools,
+    setUserTools,
+    enabledTools,
+    setEnabledTools,
+    builtInToolNames
   };
 
   return (

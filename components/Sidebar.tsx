@@ -455,13 +455,13 @@ const Sidebar: React.FC<Props> = ({
                                        {/* Header with Icon, Name, and Actions */}
                                        <div className="flex items-center gap-3 mb-2">
                                            <div 
-                                               onClick={() => !isSplitScreen && onTogglePrompt(prompt.id)}
+                                               onClick={() => !isSplitScreen && onTogglePrompt?.(prompt.id)}
                                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${!isSplitScreen ? 'cursor-pointer hover:scale-110' : ''} ${isHighlighted ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}
                                            >
                                                 <BotIcon className="w-4 h-4" />
                                            </div>
                                            <span 
-                                               onClick={() => !isSplitScreen && onTogglePrompt(prompt.id)}
+                                               onClick={() => !isSplitScreen && onTogglePrompt?.(prompt.id)}
                                                className={`text-sm font-bold truncate flex-1 ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-gray-600'}`}
                                            >{prompt.name}</span>
                                            
@@ -486,7 +486,7 @@ const Sidebar: React.FC<Props> = ({
                                        
                                        {/* Description */}
                                        <p 
-                                           onClick={() => !isSplitScreen && onTogglePrompt(prompt.id)}
+                                           onClick={() => !isSplitScreen && onTogglePrompt?.(prompt.id)}
                                            className={`text-xs line-clamp-3 leading-relaxed mb-2 pr-6 ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
                                        >
                                            {prompt.description}
@@ -498,13 +498,13 @@ const Sidebar: React.FC<Props> = ({
                                                /* Single Window Mode: Simple on/off toggle */
                                                <div className="flex gap-1">
                                                    <button
-                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt(prompt.id); }}
+                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt?.(prompt.id); }}
                                                        className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive !== false ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                                                    >
                                                        启用
                                                    </button>
                                                    <button
-                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt(prompt.id); }}
+                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt?.(prompt.id); }}
                                                        className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive === false ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                                                    >
                                                        关闭
@@ -516,7 +516,7 @@ const Sidebar: React.FC<Props> = ({
                                                    <span className="text-[10px] text-gray-400 flex-shrink-0">应用至:</span>
                                                    <div className="flex gap-2 flex-1">
                                                        <button
-                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide(prompt.id, 'left'); }}
+                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide?.(prompt.id, 'left'); }}
                                                            className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${prompt.leftEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                                                            title="左侧/上方启用"
                                                        >
@@ -524,7 +524,7 @@ const Sidebar: React.FC<Props> = ({
                                                            <span className="md:hidden">上</span>
                                                        </button>
                                                        <button
-                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide(prompt.id, 'right'); }}
+                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide?.(prompt.id, 'right'); }}
                                                            className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${prompt.rightEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                                                            title="右侧/下方启用"
                                                        >

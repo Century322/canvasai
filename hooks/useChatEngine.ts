@@ -1,30 +1,32 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { GeminiService } from '../services/geminiService';
-import { Message, MessageRole, Attachment, GenerationConfig, KnowledgeFile } from '../types';
+import { AISDKService } from '../services/aiSdkService';
+import { Message, MessageRole, Attachment, GenerationConfig, KnowledgeFile, UserTool, ModelProvider } from '../types';
 
 interface UseChatEngineProps {
   geminiService: GeminiService;
+  aiSdkService: AISDKService;
   generationConfig: GenerationConfig;
   systemInstruction: string;
   knowledgeFiles: KnowledgeFile[];
+  enabledTools: string[];
+  userTools: UserTool[];
+  activeProvider: ModelProvider;
 }
 
-// Helper: Simple Client-side RAG Algorithm
-// Splits text into chunks and scores them based on query keyword overlap
 const retrieveRelevantContext = (query: string, files: KnowledgeFile[], maxChars: number = 30000): string => {
     if (files.length === 0) return "";
 
-    const CHUNK_SIZE = 800; // ~300 tokens per chunk
+    const CHUNK_SIZE = 800;
     const OVERLAP = 100;
     
-    // 1. Pre-process query keywords (remove common stopwords in a simple way)
     const keywords = query.toLowerCase()
-        .replace(/[^\w\s\u4e00-\u9fa5]/g, '') // Remove punctuation
+        .replace(/[^\w\s\u4e00-\u9fa5]/g, '')
         .split(/\s+/)
         .filter(k => k.length > 1);
 
-    if (keywords.length === 0) return files.map(f => f.content.slice(0, 2000)).join('\n\n'); // Fallback
+    if (keywords.length === 0) return files.map(f => f.content.slice(0, 2000)).join('\n\n');
 
     interface ScoredChunk {
         fileName: string;
@@ -34,7 +36,6 @@ const retrieveRelevantContext = (query: string, files: KnowledgeFile[], maxChars
 
     const allChunks: ScoredChunk[] = [];
 
-    // 2. Chunking & Scoring
     files.forEach(file => {
         let start = 0;
         while (start < file.content.length) {
@@ -42,7 +43,6 @@ const retrieveRelevantContext = (query: string, files: KnowledgeFile[], maxChars
             const chunkText = file.content.slice(start, end);
             const lowerChunk = chunkText.toLowerCase();
             
-            // Simple frequency score
             let score = 0;
             keywords.forEach(k => {
                 if (lowerChunk.includes(k)) score += 1;
@@ -60,13 +60,11 @@ const retrieveRelevantContext = (query: string, files: KnowledgeFile[], maxChars
         }
     });
 
-    // 3. Sort by score desc
     allChunks.sort((a, b) => b.score - a.score);
 
-    // 4. Assemble Context within limit
     let contextBuffer = "";
     let usedChars = 0;
-    const topChunks = allChunks.slice(0, 15); // Take top 15 chunks max
+    const topChunks = allChunks.slice(0, 15);
 
     for (const chunk of topChunks) {
         const entry = `\n--- Fragment from ${chunk.fileName} (Relevance: ${chunk.score}) ---\n${chunk.content}\n`;
@@ -75,15 +73,19 @@ const retrieveRelevantContext = (query: string, files: KnowledgeFile[], maxChars
         usedChars += entry.length;
     }
 
-    if (!contextBuffer) return ""; // No relevant content found
+    if (!contextBuffer) return "";
     return `[Smart Context Retrieval]\nThe following are relevant document fragments found for the user's query:\n${contextBuffer}\n\n`;
 };
 
 export const useChatEngine = ({
   geminiService,
+  aiSdkService,
   generationConfig,
   systemInstruction,
-  knowledgeFiles
+  knowledgeFiles,
+  enabledTools,
+  userTools,
+  activeProvider
 }: UseChatEngineProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -117,10 +119,8 @@ export const useChatEngine = ({
       isHidden
     };
 
-    // Optimistic Update
     const newHistory = [...history, userMsg];
     
-    // Prepare System Instruction with SMART RAG
     let finalSystemInstruction = systemInstruction;
     const activeFiles = knowledgeFiles.filter(f => f.isActive);
     
@@ -135,45 +135,63 @@ export const useChatEngine = ({
     const botMsg: Message = {
       id: botMsgId,
       role: MessageRole.MODEL,
-      content: '', // Start empty
+      content: '',
       timestamp: Date.now(),
       modelId: modelId,
       modelName: modelName
     };
 
-    // Update UI with empty bot message immediately
     const messagesWithBot = [...newHistory, botMsg];
     onUpdateMessages(messagesWithBot);
     
     setIsLoading(true);
 
-    // Fix race condition: save old controller reference before creating new one
     const prevController = abortControllerRef.current;
     abortControllerRef.current = new AbortController();
     if (prevController) {
       prevController.abort();
     }
 
+    const useAiSdk = activeProvider !== 'google';
+
     try {
-      await geminiService.sendMessageStream(
-        modelId,
-        text,
-        attachments,
-        newHistory, // Send history EXCLUDING the new empty bot message
-        finalSystemInstruction,
-        generationConfig,
-        (content, metadata) => {
-          onUpdateMessages(messagesWithBot.map(m => 
-            m.id === botMsgId ? { 
-                ...m, 
-                content, 
-                // Only update metadata if provided, otherwise keep existing
-                groundingMetadata: metadata || m.groundingMetadata 
-            } : m
-          ));
-        },
-        abortControllerRef.current.signal
-      );
+      if (useAiSdk) {
+        await aiSdkService.sendMessageStream(
+          modelId,
+          text,
+          attachments,
+          newHistory,
+          finalSystemInstruction,
+          generationConfig,
+          enabledTools,
+          userTools,
+          (content) => {
+            onUpdateMessages(messagesWithBot.map(m => 
+              m.id === botMsgId ? { ...m, content } : m
+            ));
+          },
+          abortControllerRef.current.signal
+        );
+      } else {
+        await geminiService.sendMessageStream(
+          modelId,
+          text,
+          attachments,
+          newHistory,
+          finalSystemInstruction,
+          generationConfig,
+          (content, metadata) => {
+            onUpdateMessages(messagesWithBot.map(m => 
+              m.id === botMsgId ? { 
+                  ...m, 
+                  content, 
+                  groundingMetadata: metadata || m.groundingMetadata 
+              } : m
+            ));
+          },
+          abortControllerRef.current.signal
+        );
+      }
     } catch (error) {
       if (error instanceof Error && error.name !== 'AbortError') {
          onUpdateMessages(messagesWithBot.map(m => 
@@ -185,7 +203,7 @@ export const useChatEngine = ({
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [geminiService, generationConfig, systemInstruction, knowledgeFiles]);
+  }, [geminiService, aiSdkService, generationConfig, systemInstruction, knowledgeFiles, enabledTools, userTools, activeProvider]);
 
   const regenerate = useCallback(async (
       history: Message[], 

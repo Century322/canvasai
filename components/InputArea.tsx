@@ -268,7 +268,7 @@ const InputArea: React.FC<Props> = ({
          
          recognition.onstart = () => isRight ? setIsRecordingRight(true) : setIsRecording(true);
         recognition.onend = () => { setIsRecording(false); setIsRecordingRight(false); };
-        recognition.onerror = (event) => {
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             console.warn("Speech Recognition Error", event.error);
             if (event.error === 'not-allowed') {
                 alert("无法访问麦克风，请检查浏览器权限设置。");
@@ -278,8 +278,8 @@ const InputArea: React.FC<Props> = ({
         };
         
         const textBefore = isRight ? textRight : text;
-        recognition.onresult = (event) => {
-            const transcript = Array.from(event.results).map((r) => r[0].transcript).join('');
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+            const transcript = Array.from(event.results).map((r: SpeechRecognitionResult) => r[0].transcript).join('');
             const newText = textBefore + (textBefore && transcript ? ' ' : '') + transcript;
             if (isRight) setTextRight(newText);
             else setText(newText);

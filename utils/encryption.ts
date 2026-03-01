@@ -4,14 +4,18 @@ async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
   const stored = localStorage.getItem(ENCRYPTION_KEY_NAME);
   
   if (stored) {
-    const keyData = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
-    return crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'AES-GCM', length: 256 },
-      false,
-      ['encrypt', 'decrypt']
-    );
+    try {
+      const keyData = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
+      return crypto.subtle.importKey(
+        'raw',
+        keyData,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    } catch {
+      localStorage.removeItem(ENCRYPTION_KEY_NAME);
+    }
   }
   
   const key = await crypto.subtle.generateKey(
@@ -46,9 +50,9 @@ export async function encryptData(plaintext: string): Promise<string> {
     combined.set(new Uint8Array(ciphertext), iv.length);
     
     return btoa(String.fromCharCode(...combined));
-  } catch {
-    console.warn('Encryption failed, storing as plain text');
-    return plaintext;
+  } catch (error) {
+    console.error('Encryption failed:', error);
+    throw new Error('数据加密失败，请检查浏览器是否支持 Web Crypto API');
   }
 }
 
@@ -58,6 +62,10 @@ export async function decryptData(encrypted: string): Promise<string> {
   try {
     const key = await getOrCreateEncryptionKey();
     const combined = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0));
+    
+    if (combined.length <= 12) {
+      throw new Error('无效的加密数据');
+    }
     
     const iv = combined.slice(0, 12);
     const ciphertext = combined.slice(12);
@@ -69,8 +77,9 @@ export async function decryptData(encrypted: string): Promise<string> {
     );
     
     return new TextDecoder().decode(decrypted);
-  } catch {
-    return encrypted;
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error('数据解密失败，数据可能已损坏');
   }
 }
 
@@ -80,5 +89,22 @@ export function isEncrypted(value: string): boolean {
     return decoded.length > 12;
   } catch {
     return false;
+  }
+}
+
+export async function safeEncrypt(plaintext: string): Promise<string> {
+  try {
+    return await encryptData(plaintext);
+  } catch {
+    console.warn('Encryption not available, data will not be encrypted');
+    return plaintext;
+  }
+}
+
+export async function safeDecrypt(encrypted: string): Promise<string> {
+  try {
+    return await decryptData(encrypted);
+  } catch {
+    return encrypted;
   }
 }

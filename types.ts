@@ -58,20 +58,52 @@ export interface ChatSession {
 
 // Expanded Provider List
 export type ModelProvider = 
+  | 'vercel' // Vercel AI Gateway
   | 'google' 
   | 'openai' 
   | 'anthropic' 
   | 'deepseek'
-  | 'alibaba' // Dashscope
-  | 'moonshot' // Kimi
-  | 'zhipu' // BigModel
+  | 'alibaba'
+  | 'moonshot'
+  | 'zhipu'
   | 'minimax'
   | 'baichuan'
-  | 'yi' // 01.ai
-  | 'siliconflow' // SiliconFlow
-  | 'grok' // xAI
+  | 'yi'
+  | 'siliconflow'
+  | 'xai' // xAI Grok
+  | 'amazon'
+  | 'arcee-ai'
+  | 'bytedance'
+  | 'cohere'
+  | 'inception'
+  | 'kwaipilot'
+  | 'meituan'
+  | 'meta'
+  | 'mistral'
+  | 'morph'
+  | 'nvidia'
+  | 'perplexity'
+  | 'prime-intellect'
+  | 'vercel-models'
+  | 'xiaomi'
   | 'openrouter'
-  | 'custom'; // OneAPI / Other
+  | 'custom';
+
+export interface UserTool {
+  id: string;
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  executeType: 'http' | 'code';
+  executeConfig: {
+    url?: string;
+    method?: string;
+    headers?: Record<string, string>;
+    code?: string;
+  };
+  isEnabled: boolean;
+  timestamp: number;
+}
 
 export interface StoredKey {
   id: string;

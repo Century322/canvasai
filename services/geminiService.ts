@@ -446,7 +446,7 @@ export class GeminiService {
               .filter((m: { name: string }) => m.name.includes('gemini') || m.name.includes('veo')) 
               .map((m: { name: string; displayName?: string; description?: string; inputTokenLimit?: number; supportedGenerationMethods?: string[] }) => {
                   const id = m.name.replace('models/', '');
-                  const supportsImages = m.inputTokenLimit > 0 && (m.supportedGenerationMethods?.includes('generateContent'));
+                  const supportsImages = (m.inputTokenLimit || 0) > 0 && (m.supportedGenerationMethods?.includes('generateContent'));
                   const supportsVideoGen = id.includes('veo');
                   const supportsAudio = id.includes('audio') || id.includes('native') || m.supportedGenerationMethods?.includes('generateContent');
                   const isThinking = id.includes('thinking');
@@ -678,7 +678,7 @@ export class GeminiService {
                 accumulatedMetadata = chunk.candidates[0].groundingMetadata;
             }
             
-            onUpdate(accumulatedText, accumulatedMetadata);
+            onUpdate(accumulatedText, accumulatedMetadata || undefined);
       }
   }
 

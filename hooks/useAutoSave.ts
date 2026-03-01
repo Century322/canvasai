@@ -97,13 +97,13 @@ export const useAutoSave = ({
                 updated[existingIndex] = {
                   ...session,
                   messages: new Array(session.messages.length).fill({} as Message),
-                  rightMessages: new Array(session.rightMessages.length).fill({} as Message)
+                  rightMessages: new Array(session.rightMessages?.length || 0).fill({} as Message)
                 };
               } else {
                 updated.push({
                   ...session,
                   messages: new Array(session.messages.length).fill({} as Message),
-                  rightMessages: new Array(session.rightMessages.length).fill({} as Message)
+                  rightMessages: new Array(session.rightMessages?.length || 0).fill({} as Message)
                 });
               }
             }
