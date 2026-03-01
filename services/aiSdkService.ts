@@ -593,6 +593,10 @@ export class AISDKService {
       modelId
     );
 
+    console.log('[sendMessageStream] provider:', this.providerId, 'model:', modelId);
+
+    let streamError: Error | null = null;
+
     try {
       const result = streamText({
         model,
@@ -607,6 +611,10 @@ export class AISDKService {
             console.log('Tool results:', toolResults);
           }
         },
+        onError: (error) => {
+          console.error('[stream] onError callback:', error);
+          streamError = new Error(error.message || 'Unknown stream error');
+        },
       });
 
       let fullResponse = '';
@@ -615,9 +623,16 @@ export class AISDKService {
           throw new DOMException('Aborted', 'AbortError');
         }
         fullResponse += delta;
+        console.log('[stream] delta:', delta);
         onUpdate(fullResponse);
       }
+      console.log('[stream] done, fullResponse:', fullResponse);
+      
+      if (streamError) {
+        throw streamError;
+      }
     } catch (error) {
+      console.error('[stream] error:', error);
       if (error instanceof Error && error.name === 'AbortError') {
         throw error;
       }
@@ -631,8 +646,8 @@ export class AISDKService {
     if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid_api_key')) {
       return 'API Key 无效或已过期 (401)';
     }
-    if (msg.includes('402') || msg.includes('payment required')) {
-      return '账户余额不足 (402)';
+    if (msg.includes('402') || msg.includes('payment required') || msg.includes('insufficient balance')) {
+      return '账户余额不足，请充值后重试';
     }
     if (msg.includes('403') || msg.includes('permission denied')) {
       return '权限不足或区域受限 (403)';
