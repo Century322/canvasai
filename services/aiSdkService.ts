@@ -572,7 +572,9 @@ export class AISDKService {
       { role: 'user', content: currentInput }
     ];
 
-    if (!isDev()) {
+    const shouldUseProxy = !isDev() && this.providerId !== 'vercel';
+
+    if (shouldUseProxy) {
       try {
         await streamViaProxy(
           this.providerId,
@@ -709,7 +711,9 @@ export class AISDKService {
       
       console.log(`[validateKey] Testing ${providerId} with model: ${testModelId}`);
       
-      if (!isDev()) {
+      const shouldUseProxy = !isDev() && providerId !== 'vercel';
+
+      if (shouldUseProxy) {
         const messages: AISDKMessage[] = [{ role: 'user', content: 'Hi' }];
         await streamViaProxy(
           providerId,
