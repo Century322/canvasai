@@ -613,7 +613,10 @@ export class AISDKService {
         },
         onError: (error) => {
           console.error('[stream] onError callback:', error);
-          streamError = new Error(error.message || 'Unknown stream error');
+          const errorMsg = typeof error === 'object' && error !== null && 'message' in error 
+            ? (error as { message: string }).message 
+            : 'Unknown stream error';
+          streamError = new Error(errorMsg);
         },
       });
 
