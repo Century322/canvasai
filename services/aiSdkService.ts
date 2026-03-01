@@ -1,4 +1,4 @@
-import { streamText, tool, stepCountIs, createGateway } from 'ai';
+import { streamText, tool, stepCountIs } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
@@ -198,8 +198,11 @@ function createModelClient(config: ProviderConfig, modelId: string) {
   if (isDev()) {
     switch (providerId) {
       case 'vercel': {
-        const vercelGateway = createGateway({ apiKey });
-        return vercelGateway(modelId);
+        const vercelClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/vercel',
+        });
+        return vercelClient.chat(modelId);
       }
       case 'anthropic': {
         const anthropicClient = createAnthropic({
@@ -297,11 +300,11 @@ function createModelClient(config: ProviderConfig, modelId: string) {
 
   switch (providerId) {
     case 'vercel': {
-      const vercelGateway = createGateway({ 
+      const vercelClient = createOpenAI({
         apiKey,
         baseURL: 'https://gateway.ai.vercel.com/v1',
       });
-      return vercelGateway(modelId);
+      return vercelClient.chat(modelId);
     }
     case 'anthropic': {
       const anthropicClient = createAnthropic({
