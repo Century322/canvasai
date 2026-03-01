@@ -59,6 +59,9 @@ export default async function handler(req: Request) {
     } else if (provider === 'google') {
       const separator = url.includes('?') ? '&' : '?';
       url = `${url}${separator}key=${apiKey}`;
+    } else if (provider === 'minimax') {
+      // MiniMax uses Bearer token authentication
+      headers['Authorization'] = `Bearer ${apiKey}`;
     } else {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
