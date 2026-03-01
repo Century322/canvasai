@@ -38,8 +38,7 @@ const builtInTools: Record<string, ToolDefinition> = {
             humidity: data.main.humidity,
           };
         }
-      } catch (e) {
-      }
+      } catch (e) {}
       const temperature = Math.round(Math.random() * 35 - 5);
       const conditions = ['晴朗', '多云', '阴天', '小雨', '大雨', '雪'];
       return {
@@ -172,113 +171,221 @@ interface ProviderConfig {
   baseUrl?: string;
 }
 
+const isDev = () => typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+const PROVIDER_ENDPOINTS: Record<string, string> = {
+  vercel: '/chat/completions',
+  openai: '/chat/completions',
+  anthropic: '/messages',
+  google: '/models/{model}:generateContent',
+  deepseek: '/chat/completions',
+  alibaba: '/chat/completions',
+  xai: '/chat/completions',
+  mistral: '/chat/completions',
+  perplexity: '/chat/completions',
+  cohere: '/chat/completions',
+  openrouter: '/chat/completions',
+  moonshot: '/chat/completions',
+  zhipu: '/chat/completions',
+  meta: '/chat/completions',
+  minimax: '/chat/completions',
+  nvidia: '/chat/completions',
+};
+
 function createModelClient(config: ProviderConfig, modelId: string) {
   const { apiKey, providerId, baseUrl } = config;
-  
-  const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+  if (isDev()) {
+    switch (providerId) {
+      case 'vercel': {
+        const vercelGateway = createGateway({ apiKey });
+        return vercelGateway(modelId);
+      }
+      case 'anthropic': {
+        const anthropicClient = createAnthropic({
+          apiKey,
+          baseURL: '/api/anthropic',
+        });
+        return anthropicClient(modelId);
+      }
+      case 'google': {
+        const googleClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/google',
+        });
+        return googleClient.chat(modelId);
+      }
+      case 'openai': {
+        const openaiClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/openai',
+        });
+        return openaiClient.chat(modelId);
+      }
+      case 'alibaba': {
+        const alibabaClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/alibaba',
+        });
+        return alibabaClient.chat(modelId);
+      }
+      case 'deepseek': {
+        const deepseekClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/deepseek',
+        });
+        return deepseekClient.chat(modelId);
+      }
+      case 'xai': {
+        const xaiClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/xai',
+        });
+        return xaiClient.chat(modelId);
+      }
+      case 'mistral': {
+        const mistralClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/mistral',
+        });
+        return mistralClient.chat(modelId);
+      }
+      case 'perplexity': {
+        const perplexityClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/perplexity',
+        });
+        return perplexityClient.chat(modelId);
+      }
+      case 'cohere': {
+        const cohereClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/cohere',
+        });
+        return cohereClient.chat(modelId);
+      }
+      case 'openrouter': {
+        const openrouterClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/openrouter',
+        });
+        return openrouterClient.chat(modelId);
+      }
+      case 'moonshot': {
+        const moonshotClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/moonshot',
+        });
+        return moonshotClient.chat(modelId);
+      }
+      case 'zhipu': {
+        const zhipuClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/zhipu',
+        });
+        return zhipuClient.chat(modelId);
+      }
+      default: {
+        const customClient = createOpenAI({
+          apiKey,
+          baseURL: baseUrl || 'https://api.openai.com/v1',
+        });
+        return customClient.chat(modelId);
+      }
+    }
+  }
 
   switch (providerId) {
     case 'vercel': {
-      const vercelGateway = createGateway({ apiKey });
+      const vercelGateway = createGateway({ 
+        apiKey,
+        baseURL: 'https://gateway.ai.vercel.com/v1',
+      });
       return vercelGateway(modelId);
     }
-
     case 'anthropic': {
       const anthropicClient = createAnthropic({
         apiKey,
-        baseURL: isDev ? '/api/anthropic' : undefined,
       });
       return anthropicClient(modelId);
     }
-
     case 'google': {
       const googleClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/google' : (baseUrl || 'https://generativelanguage.googleapis.com/v1beta'),
+        baseURL: baseUrl || 'https://generativelanguage.googleapis.com/v1beta',
       });
       return googleClient.chat(modelId);
     }
-
     case 'openai': {
       const openaiClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/openai' : (baseUrl || 'https://api.openai.com/v1'),
+        baseURL: baseUrl || 'https://api.openai.com/v1',
       });
       return openaiClient.chat(modelId);
     }
-
     case 'alibaba': {
       const alibabaClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/alibaba' : (baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
+        baseURL: baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       });
       return alibabaClient.chat(modelId);
     }
-
     case 'deepseek': {
       const deepseekClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/deepseek' : (baseUrl || 'https://api.deepseek.com/v1'),
+        baseURL: baseUrl || 'https://api.deepseek.com/v1',
       });
       return deepseekClient.chat(modelId);
     }
-
     case 'xai': {
       const xaiClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/xai' : (baseUrl || 'https://api.x.ai/v1'),
+        baseURL: baseUrl || 'https://api.x.ai/v1',
       });
       return xaiClient.chat(modelId);
     }
-
     case 'mistral': {
       const mistralClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/mistral' : (baseUrl || 'https://api.mistral.ai/v1'),
+        baseURL: baseUrl || 'https://api.mistral.ai/v1',
       });
       return mistralClient.chat(modelId);
     }
-
     case 'perplexity': {
       const perplexityClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/perplexity' : (baseUrl || 'https://api.perplexity.ai'),
+        baseURL: baseUrl || 'https://api.perplexity.ai',
       });
       return perplexityClient.chat(modelId);
     }
-
     case 'cohere': {
       const cohereClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/cohere' : (baseUrl || 'https://api.cohere.ai/compatibility/v1'),
+        baseURL: baseUrl || 'https://api.cohere.ai/compatibility/v1',
       });
       return cohereClient.chat(modelId);
     }
-
     case 'openrouter': {
       const openrouterClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/openrouter' : (baseUrl || 'https://openrouter.ai/api/v1'),
+        baseURL: baseUrl || 'https://openrouter.ai/api/v1',
       });
       return openrouterClient.chat(modelId);
     }
-
     case 'moonshot': {
       const moonshotClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/moonshot' : (baseUrl || 'https://api.moonshot.cn/v1'),
+        baseURL: baseUrl || 'https://api.moonshot.cn/v1',
       });
       return moonshotClient.chat(modelId);
     }
-
     case 'zhipu': {
       const zhipuClient = createOpenAI({
         apiKey,
-        baseURL: isDev ? '/api/zhipu' : (baseUrl || 'https://open.bigmodel.cn/api/paas/v4'),
+        baseURL: baseUrl || 'https://open.bigmodel.cn/api/paas/v4',
       });
       return zhipuClient.chat(modelId);
     }
-
     case 'meta': {
       const metaClient = createOpenAI({
         apiKey,
@@ -286,7 +393,6 @@ function createModelClient(config: ProviderConfig, modelId: string) {
       });
       return metaClient.chat(modelId);
     }
-
     case 'amazon': {
       const amazonClient = createOpenAI({
         apiKey,
@@ -294,7 +400,6 @@ function createModelClient(config: ProviderConfig, modelId: string) {
       });
       return amazonClient.chat(modelId);
     }
-
     case 'minimax': {
       const minimaxClient = createOpenAI({
         apiKey,
@@ -302,13 +407,131 @@ function createModelClient(config: ProviderConfig, modelId: string) {
       });
       return minimaxClient.chat(modelId);
     }
-
     default: {
       const customClient = createOpenAI({
         apiKey,
         baseURL: baseUrl || 'https://api.openai.com/v1',
       });
       return customClient.chat(modelId);
+    }
+  }
+}
+
+async function streamViaProxy(
+  provider: string,
+  modelId: string,
+  messages: AISDKMessage[],
+  systemInstruction: string | undefined,
+  config: GenerationConfig,
+  apiKey: string,
+  onUpdate: (content: string) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const endpoint = PROVIDER_ENDPOINTS[provider] || '/chat/completions';
+  
+  let body: any;
+  
+  if (provider === 'anthropic') {
+    body = {
+      model: modelId,
+      messages: messages,
+      system: systemInstruction,
+      max_tokens: config.maxOutputTokens,
+      temperature: config.temperature,
+      stream: true,
+    };
+  } else if (provider === 'google') {
+    const contents = messages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content }],
+    }));
+    body = {
+      contents,
+      systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+      generationConfig: {
+        temperature: config.temperature,
+        topP: config.topP,
+        maxOutputTokens: config.maxOutputTokens,
+      },
+    };
+  } else {
+    body = {
+      model: modelId,
+      messages: systemInstruction 
+        ? [{ role: 'system', content: systemInstruction }, ...messages]
+        : messages,
+      temperature: config.temperature,
+      top_p: config.topP,
+      max_tokens: config.maxOutputTokens,
+      stream: true,
+    };
+  }
+
+  const response = await fetch('/api/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      provider,
+      endpoint,
+      apiKey,
+      body,
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `HTTP Error ${response.status}`);
+  }
+
+  if (!response.body) {
+    throw new Error('No response body');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let done = false;
+  let accumulatedText = '';
+
+  while (!done) {
+    const { value, done: readerDone } = await reader.read();
+    done = readerDone;
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n');
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const dataStr = line.slice(6).trim();
+        if (dataStr === '[DONE]') continue;
+        try {
+          const data = JSON.parse(dataStr);
+          
+          if (provider === 'anthropic') {
+            if (data.type === 'content_block_delta') {
+              accumulatedText += data.delta?.text || '';
+            }
+          } else if (provider === 'google') {
+            if (data.candidates?.[0]?.content?.parts) {
+              for (const part of data.candidates[0].content.parts) {
+                if (part.text) {
+                  accumulatedText += part.text;
+                }
+              }
+            }
+          } else {
+            const delta = data.choices?.[0]?.delta;
+            if (delta?.reasoning_content) {
+              accumulatedText += `hed{delta.reasoning_content}ink`;
+            } else if (delta?.content) {
+              accumulatedText += delta.content;
+            }
+          }
+          
+          onUpdate(accumulatedText);
+        } catch (e) {}
+      }
     }
   }
 }
@@ -348,6 +571,27 @@ export class AISDKService {
       ...convertMessages(history),
       { role: 'user', content: currentInput }
     ];
+
+    if (!isDev()) {
+      try {
+        await streamViaProxy(
+          this.providerId,
+          modelId,
+          messages,
+          systemInstruction,
+          config,
+          this.apiKey,
+          onUpdate,
+          signal
+        );
+        return;
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw error;
+        }
+        throw new Error(this.translateError(error));
+      }
+    }
 
     const tools: Record<string, any> = {};
 
@@ -433,6 +677,9 @@ export class AISDKService {
     if (msg.includes('500') || msg.includes('502') || msg.includes('503')) {
       return '服务器繁忙 (5xx)';
     }
+    if (msg.includes('failed to fetch') || msg.includes('network error')) {
+      return '网络连接失败，请检查网络或代理设置';
+    }
     
     return `请求出错: ${error instanceof Error ? error.message : String(error)}`;
   }
@@ -462,6 +709,21 @@ export class AISDKService {
       
       console.log(`[validateKey] Testing ${providerId} with model: ${testModelId}`);
       
+      if (!isDev()) {
+        const messages: AISDKMessage[] = [{ role: 'user', content: 'Hi' }];
+        await streamViaProxy(
+          providerId,
+          testModelId,
+          messages,
+          undefined,
+          { temperature: 0.7, topP: 0.95, maxOutputTokens: 100, historyLimit: 10 },
+          apiKey,
+          () => {},
+          undefined
+        );
+        return { valid: true, message: '验证成功' };
+      }
+
       const model = createModelClient(
         {
           apiKey,
