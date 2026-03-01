@@ -1,5 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const PROVIDER_CONFIGS: Record<string, { baseUrl: string }> = {
   vercel: { baseUrl: 'https://gateway.ai.vercel.com/v1' },
   openai: { baseUrl: 'https://api.openai.com/v1' },
@@ -52,8 +50,8 @@ export default async function handler(req: Request) {
       });
     }
 
-    const config = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS.openai;
-    let url = `${config.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+    const providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS.openai;
+    let url = `${providerConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -79,10 +77,10 @@ export default async function handler(req: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return new Response(errorText, {
+      return new Response(JSON.stringify({ error: errorText || `HTTP ${response.status}` }), {
         status: response.status,
         headers: {
-          'Content-Type': contentType,
+          'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
       });
@@ -109,6 +107,7 @@ export default async function handler(req: Request) {
       },
     });
   } catch (error) {
+    console.error('API Proxy Error:', error);
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Internal server error'
     }), {
