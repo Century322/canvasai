@@ -67,26 +67,10 @@ export type ModelProvider =
   | 'moonshot'
   | 'zhipu'
   | 'minimax'
-  | 'baichuan'
-  | 'yi'
-  | 'siliconflow'
   | 'xai' // xAI Grok
-  | 'amazon'
-  | 'arcee-ai'
   | 'bytedance'
-  | 'cohere'
-  | 'inception'
-  | 'kwaipilot'
-  | 'meituan'
-  | 'meta'
-  | 'mistral'
-  | 'morph'
-  | 'nvidia'
   | 'perplexity'
-  | 'prime-intellect'
   | 'vercel-models'
-  | 'xiaomi'
-  | 'openrouter'
   | 'custom';
 
 export interface UserTool {

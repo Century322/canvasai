@@ -6,15 +6,11 @@ const PROVIDER_CONFIGS: Record<string, { baseUrl: string }> = {
   deepseek: { baseUrl: 'https://api.deepseek.com/v1' },
   alibaba: { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1' },
   xai: { baseUrl: 'https://api.x.ai/v1' },
-  mistral: { baseUrl: 'https://api.mistral.ai/v1' },
   perplexity: { baseUrl: 'https://api.perplexity.ai' },
-  cohere: { baseUrl: 'https://api.cohere.ai/compatibility/v1' },
-  openrouter: { baseUrl: 'https://openrouter.ai/api/v1' },
   moonshot: { baseUrl: 'https://api.moonshot.cn/v1' },
   zhipu: { baseUrl: 'https://open.bigmodel.cn/api/paas/v4' },
-  meta: { baseUrl: 'https://api.llama.com/compat/v1' },
   minimax: { baseUrl: 'https://api.minimax.chat/v1' },
-  nvidia: { baseUrl: 'https://integrate.api.nvidia.com/v1' },
+  bytedance: { baseUrl: 'https://ark.cn-beijing.volces.com/api/v3' },
 };
 
 export const config = {
@@ -40,81 +36,44 @@ export default async function handler(req: Request) {
     });
   }
 
-  let requestBody: {
-    provider: string;
-    endpoint: string;
-    apiKey: string;
-    body: any;
-  };
-
   try {
-    requestBody = await req.json();
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
-  }
+    const { provider, endpoint, apiKey, body } = await req.json();
 
-  const { provider, endpoint, apiKey, body } = requestBody;
+    if (!provider || !endpoint || !apiKey) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-  if (!provider || !endpoint || !apiKey) {
-    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
-  }
+    const providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS.openai;
+    let url = `${providerConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
-  const providerConfig = PROVIDER_CONFIGS[provider] || PROVIDER_CONFIGS.openai;
-  let url = `${providerConfig.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'text/event-stream',
-  };
-
-  if (provider === 'anthropic') {
-    headers['x-api-key'] = apiKey;
-    headers['anthropic-version'] = '2023-06-01';
-  } else if (provider === 'google') {
-    const separator = url.includes('?') ? '&' : '?';
-    url = `${url}${separator}key=${apiKey}`;
-  } else {
-    headers['Authorization'] = `Bearer ${apiKey}`;
-  }
-
-  if (provider === 'openrouter') {
-    headers['HTTP-Referer'] = 'https://www.dygc.top';
-    headers['X-Title'] = 'Canvas AI Chat';
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    if (provider === 'anthropic') {
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+    } else if (provider === 'google') {
+      const separator = url.includes('?') ? '&' : '?';
+      url = `${url}${separator}key=${apiKey}`;
+    } else {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
 
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     const contentType = response.headers.get('content-type') || 'application/json';
 
     if (!response.ok) {
-      let errorText: string;
-      try {
-        const errorJson = await response.json();
-        errorText = JSON.stringify(errorJson);
-      } catch {
-        errorText = await response.text();
-      }
-      return new Response(JSON.stringify({ 
-        error: errorText || `HTTP ${response.status}`,
-        status: response.status 
-      }), {
+      const errorText = await response.text();
+      return new Response(JSON.stringify({ error: errorText || `HTTP ${response.status}` }), {
         status: response.status,
         headers: {
           'Content-Type': 'application/json',
@@ -144,20 +103,9 @@ export default async function handler(req: Request) {
       },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    if (errorMessage.includes('abort')) {
-      return new Response(JSON.stringify({ error: 'Request timeout (25s)' }), {
-        status: 504,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
-    }
-
+    console.error('API Proxy Error:', error);
     return new Response(JSON.stringify({
-      error: errorMessage
+      error: error instanceof Error ? error.message : 'Internal server error'
     }), {
       status: 500,
       headers: {

@@ -150,30 +150,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
     ]
   },
   {
-    id: 'amazon',
-    name: 'Amazon',
-    description: 'Amazon Nova 系列模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'AWS Access Key',
-    models: [
-      { id: 'nova-pro', name: 'Nova Pro', description: '专业版模型', isPaid: true },
-      { id: 'nova-micro', name: 'Nova Micro', description: '微型模型' },
-      { id: 'nova-lite', name: 'Nova Lite', description: '轻量版模型' },
-      { id: 'nova-2-lite', name: 'Nova 2 Lite', description: 'Nova 2 轻量版' },
-    ]
-  },
-  {
-    id: 'arcee-ai',
-    name: 'Arcee AI',
-    description: 'Arcee AI 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'trinity-mini', name: 'Trinity Mini', description: '轻量级模型' },
-      { id: 'trinity-large-preview', name: 'Trinity Large Preview', description: '大型预览版', isPaid: true },
-    ]
-  },
-  {
     id: 'bytedance',
     name: 'ByteDance',
     description: '字节跳动模型',
@@ -182,17 +158,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
     models: [
       { id: 'seed-1.6', name: 'Seed 1.6', description: 'Seed 1.6 模型' },
       { id: 'seed-1.8', name: 'Seed 1.8', description: 'Seed 1.8 模型' },
-    ]
-  },
-  {
-    id: 'cohere',
-    name: 'Cohere',
-    description: 'Cohere 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    baseUrl: 'https://api.cohere.ai/v1',
-    models: [
-      { id: 'command-a', name: 'Command A', description: 'Command A 模型', isPaid: true },
     ]
   },
   {
@@ -212,55 +177,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
     ]
   },
   {
-    id: 'inception',
-    name: 'Inception',
-    description: 'Inception 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'mercury-coder-small', name: 'Mercury Coder Small', description: '代码模型' },
-    ]
-  },
-  {
-    id: 'kwaipilot',
-    name: 'KwaiPilot',
-    description: '快手 KwaiPilot 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'kat-coder-pro-v1', name: 'KAT Coder Pro V1', description: '代码专业版' },
-    ]
-  },
-  {
-    id: 'meituan',
-    name: 'Meituan',
-    description: '美团模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'longcat-flash-thinking', name: 'LongCat Flash Thinking', description: '思维链模型', isThinking: true },
-      { id: 'longcat-flash-chat', name: 'LongCat Flash Chat', description: '对话模型' },
-    ]
-  },
-  {
-    id: 'meta',
-    name: 'Meta',
-    description: 'Llama 系列模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'llama-4-scout', name: 'Llama 4 Scout', description: 'Llama 4 Scout' },
-      { id: 'llama-4-maverick', name: 'Llama 4 Maverick', description: 'Llama 4 Maverick' },
-      { id: 'llama-3.3-70b', name: 'Llama 3.3 70B', description: '70B 参数模型' },
-      { id: 'llama-3.2-90b', name: 'Llama 3.2 90B', description: '90B 参数模型', isPaid: true },
-      { id: 'llama-3.2-3b', name: 'Llama 3.2 3B', description: '3B 参数模型' },
-      { id: 'llama-3.2-1b', name: 'Llama 3.2 1B', description: '1B 参数模型' },
-      { id: 'llama-3.2-11b', name: 'Llama 3.2 11B', description: '11B 参数模型', supportsImages: true },
-      { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', description: '8B 参数模型' },
-      { id: 'llama-3.1-70b', name: 'Llama 3.1 70B', description: '70B 参数模型' },
-    ]
-  },
-  {
     id: 'minimax',
     name: 'MiniMax',
     description: 'MiniMax 模型',
@@ -271,32 +187,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
       { id: 'minimax-m2.1-lightning', name: 'MiniMax M2.1 Lightning', description: '闪电版' },
       { id: 'minimax-m2.1', name: 'MiniMax M2.1', description: 'M2.1 模型' },
       { id: 'minimax-m2', name: 'MiniMax M2', description: 'M2 模型' },
-    ]
-  },
-  {
-    id: 'mistral',
-    name: 'Mistral',
-    description: 'Mistral 系列模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    baseUrl: 'https://api.mistral.ai/v1',
-    models: [
-      { id: 'pixtral-large', name: 'Pixtral Large', description: '大型视觉模型', supportsImages: true, isPaid: true },
-      { id: 'pixtral-12b', name: 'Pixtral 12B', description: '视觉模型', supportsImages: true },
-      { id: 'mixtral-8x22b-instruct', name: 'Mixtral 8x22B Instruct', description: 'MoE 模型', isPaid: true },
-      { id: 'mistral-small', name: 'Mistral Small', description: '小型模型' },
-      { id: 'mistral-nemo', name: 'Mistral Nemo', description: 'Nemo 模型' },
-      { id: 'mistral-medium', name: 'Mistral Medium', description: '中型模型', isPaid: true },
-      { id: 'mistral-large-3', name: 'Mistral Large 3', description: '大型模型', isPaid: true },
-      { id: 'codestral', name: 'Codestral', description: '代码模型' },
-      { id: 'ministral-8b', name: 'Ministral 8B', description: '8B 模型' },
-      { id: 'ministral-3b', name: 'Ministral 3B', description: '3B 模型' },
-      { id: 'ministral-14b', name: 'Ministral 14B', description: '14B 模型' },
-      { id: 'magistral-small', name: 'Magistral Small', description: '小型模型' },
-      { id: 'magistral-medium', name: 'Magistral Medium', description: '中型模型' },
-      { id: 'devstral-small-2', name: 'Devstral Small 2', description: '开发模型' },
-      { id: 'devstral-small', name: 'Devstral Small', description: '开发模型' },
-      { id: 'devstral-2', name: 'Devstral 2', description: '开发模型' },
     ]
   },
   {
@@ -316,29 +206,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
     ]
   },
   {
-    id: 'morph',
-    name: 'Morph',
-    description: 'Morph 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'morph-v3-large', name: 'Morph V3 Large', description: '大型模型', isPaid: true },
-      { id: 'morph-v3-fast', name: 'Morph V3 Fast', description: '快速模型' },
-    ]
-  },
-  {
-    id: 'nvidia',
-    name: 'NVIDIA',
-    description: 'NVIDIA Nemotron 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'nemotron-nano-9b-v2', name: 'Nemotron Nano 9B V2', description: '9B 模型' },
-      { id: 'nemotron-nano-12b-v2-vl', name: 'Nemotron Nano 12B VL', description: '视觉模型', supportsImages: true },
-      { id: 'nemotron-3-nano-30b-a3b', name: 'Nemotron 3 Nano 30B', description: '30B 模型' },
-    ]
-  },
-  {
     id: 'perplexity',
     name: 'Perplexity',
     description: 'Perplexity Sonar 模型',
@@ -350,16 +217,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
       { id: 'sonar-reasoning', name: 'Sonar Reasoning', description: '推理模型', isThinking: true },
       { id: 'sonar-pro', name: 'Sonar Pro', description: '专业版', isPaid: true },
       { id: 'sonar', name: 'Sonar', description: '标准版' },
-    ]
-  },
-  {
-    id: 'prime-intellect',
-    name: 'Prime Intellect',
-    description: 'Prime Intellect 模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'intellect-3', name: 'Intellect 3', description: 'Intellect 3 模型' },
     ]
   },
   {
@@ -387,16 +244,6 @@ export const MODEL_PROVIDERS: ModelProviderConfig[] = [
       { id: 'grok-2-vision', name: 'Grok 2 Vision', description: '视觉模型', supportsImages: true },
       { id: 'grok-beta', name: 'Grok Beta', description: 'Grok 测试版' },
       { id: 'grok-vision-beta', name: 'Grok Vision Beta', description: '视觉测试版', supportsImages: true },
-    ]
-  },
-  {
-    id: 'xiaomi',
-    name: 'Xiaomi',
-    description: '小米模型',
-    requiresApiKey: true,
-    apiKeyPlaceholder: 'API Key',
-    models: [
-      { id: 'mimo-v2-flash', name: 'MiMo V2 Flash', description: 'Flash 模型' },
     ]
   },
   {

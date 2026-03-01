@@ -181,15 +181,11 @@ const PROVIDER_ENDPOINTS: Record<string, string> = {
   deepseek: '/chat/completions',
   alibaba: '/chat/completions',
   xai: '/chat/completions',
-  mistral: '/chat/completions',
   perplexity: '/chat/completions',
-  cohere: '/chat/completions',
-  openrouter: '/chat/completions',
   moonshot: '/chat/completions',
   zhipu: '/chat/completions',
-  meta: '/chat/completions',
   minimax: '/chat/completions',
-  nvidia: '/chat/completions',
+  bytedance: '/chat/completions',
 };
 
 function createModelClient(config: ProviderConfig, modelId: string) {
@@ -246,33 +242,12 @@ function createModelClient(config: ProviderConfig, modelId: string) {
         });
         return xaiClient.chat(modelId);
       }
-      case 'mistral': {
-        const mistralClient = createOpenAI({
-          apiKey,
-          baseURL: '/api/mistral',
-        });
-        return mistralClient.chat(modelId);
-      }
       case 'perplexity': {
         const perplexityClient = createOpenAI({
           apiKey,
           baseURL: '/api/perplexity',
         });
         return perplexityClient.chat(modelId);
-      }
-      case 'cohere': {
-        const cohereClient = createOpenAI({
-          apiKey,
-          baseURL: '/api/cohere',
-        });
-        return cohereClient.chat(modelId);
-      }
-      case 'openrouter': {
-        const openrouterClient = createOpenAI({
-          apiKey,
-          baseURL: '/api/openrouter',
-        });
-        return openrouterClient.chat(modelId);
       }
       case 'moonshot': {
         const moonshotClient = createOpenAI({
@@ -287,6 +262,20 @@ function createModelClient(config: ProviderConfig, modelId: string) {
           baseURL: '/api/zhipu',
         });
         return zhipuClient.chat(modelId);
+      }
+      case 'minimax': {
+        const minimaxClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/minimax',
+        });
+        return minimaxClient.chat(modelId);
+      }
+      case 'bytedance': {
+        const bytedanceClient = createOpenAI({
+          apiKey,
+          baseURL: '/api/bytedance',
+        });
+        return bytedanceClient.chat(modelId);
       }
       default: {
         const customClient = createOpenAI({
@@ -347,33 +336,12 @@ function createModelClient(config: ProviderConfig, modelId: string) {
       });
       return xaiClient.chat(modelId);
     }
-    case 'mistral': {
-      const mistralClient = createOpenAI({
-        apiKey,
-        baseURL: baseUrl || 'https://api.mistral.ai/v1',
-      });
-      return mistralClient.chat(modelId);
-    }
     case 'perplexity': {
       const perplexityClient = createOpenAI({
         apiKey,
         baseURL: baseUrl || 'https://api.perplexity.ai',
       });
       return perplexityClient.chat(modelId);
-    }
-    case 'cohere': {
-      const cohereClient = createOpenAI({
-        apiKey,
-        baseURL: baseUrl || 'https://api.cohere.ai/compatibility/v1',
-      });
-      return cohereClient.chat(modelId);
-    }
-    case 'openrouter': {
-      const openrouterClient = createOpenAI({
-        apiKey,
-        baseURL: baseUrl || 'https://openrouter.ai/api/v1',
-      });
-      return openrouterClient.chat(modelId);
     }
     case 'moonshot': {
       const moonshotClient = createOpenAI({
@@ -389,26 +357,19 @@ function createModelClient(config: ProviderConfig, modelId: string) {
       });
       return zhipuClient.chat(modelId);
     }
-    case 'meta': {
-      const metaClient = createOpenAI({
-        apiKey,
-        baseURL: baseUrl || 'https://api.llama.com/compat/v1',
-      });
-      return metaClient.chat(modelId);
-    }
-    case 'amazon': {
-      const amazonClient = createOpenAI({
-        apiKey,
-        baseURL: baseUrl || 'https://bedrock-runtime.us-east-1.amazonaws.com',
-      });
-      return amazonClient.chat(modelId);
-    }
     case 'minimax': {
       const minimaxClient = createOpenAI({
         apiKey,
         baseURL: baseUrl || 'https://api.minimax.chat/v1',
       });
       return minimaxClient.chat(modelId);
+    }
+    case 'bytedance': {
+      const bytedanceClient = createOpenAI({
+        apiKey,
+        baseURL: baseUrl || 'https://ark.cn-beijing.volces.com/api/v3',
+      });
+      return bytedanceClient.chat(modelId);
     }
     default: {
       const customClient = createOpenAI({

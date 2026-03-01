@@ -40,25 +40,10 @@ export default defineConfig(({ mode }) => {
                     changeOrigin: true,
                     rewrite: (path) => path.replace(/^\/api\/deepseek/, '/v1'),
                 },
-                '/api/mistral': {
-                    target: 'https://api.mistral.ai',
-                    changeOrigin: true,
-                    rewrite: (path) => path.replace(/^\/api\/mistral/, '/v1'),
-                },
                 '/api/perplexity': {
                     target: 'https://api.perplexity.ai',
                     changeOrigin: true,
                     rewrite: (path) => path.replace(/^\/api\/perplexity/, ''),
-                },
-                '/api/cohere': {
-                    target: 'https://api.cohere.ai',
-                    changeOrigin: true,
-                    rewrite: (path) => path.replace(/^\/api\/cohere/, '/compatibility/v1'),
-                },
-                '/api/openrouter': {
-                    target: 'https://openrouter.ai',
-                    changeOrigin: true,
-                    rewrite: (path) => path.replace(/^\/api\/openrouter/, '/api/v1'),
                 },
                 '/api/moonshot': {
                     target: 'https://api.moonshot.cn',
@@ -74,6 +59,16 @@ export default defineConfig(({ mode }) => {
                     target: 'https://generativelanguage.googleapis.com',
                     changeOrigin: true,
                     rewrite: (path) => path.replace(/^\/api\/google/, '/v1beta'),
+                },
+                '/api/minimax': {
+                    target: 'https://api.minimax.chat',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/minimax/, '/v1'),
+                },
+                '/api/bytedance': {
+                    target: 'https://ark.cn-beijing.volces.com',
+                    changeOrigin: true,
+                    rewrite: (path) => path.replace(/^\/api\/bytedance/, '/api/v3'),
                 },
             },
         },
