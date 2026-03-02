@@ -326,7 +326,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div 
-      className="flex h-full bg-white dark:bg-[#212121] text-gray-800 dark:text-gray-100 font-sans overflow-hidden relative"
+      className="flex h-[100dvh] bg-white dark:bg-[#212121] text-gray-800 dark:text-gray-100 font-sans overflow-hidden relative"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
