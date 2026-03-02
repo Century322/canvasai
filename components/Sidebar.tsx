@@ -1,11 +1,11 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ChatSession, KnowledgeFile, PromptPreset, Message, MessageRole } from '../types';
 import { 
     NewChatIcon, TrashIcon, BotIcon, 
     FileTextIcon, UploadIcon,
     ChevronLeftIcon, ChevronRightIcon,
-    XIcon, PlusIcon, DownloadIcon, EditIcon, SplitScreenIcon
+    XIcon, PlusIcon, DownloadIcon, EditIcon, SplitScreenIcon, PinIcon
 } from './Icons';
 
 interface Props {
@@ -79,6 +79,75 @@ const Sidebar: React.FC<Props> = ({
   const [newPromptName, setNewPromptName] = useState('');
   const [newPromptDesc, setNewPromptDesc] = useState('');
   const [newPromptContent, setNewPromptContent] = useState('');
+
+  // Mobile long press menu state
+  const [contextMenuSession, setContextMenuSession] = useState<ChatSession | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Knowledge & Prompt context menu
+  const [contextMenuKnowledge, setContextMenuKnowledge] = useState<KnowledgeFile | null>(null);
+  const [contextMenuPrompt, setContextMenuPrompt] = useState<PromptPreset | null>(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleTouchStart = (e: React.TouchEvent, session: ChatSession) => {
+    if (!isMobile) return;
+    const touch = e.touches[0];
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenuSession(session);
+      setContextMenuPosition({ x: touch.clientX, y: touch.clientY });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuSession(null);
+    setContextMenuKnowledge(null);
+    setContextMenuPrompt(null);
+  };
+
+  // Knowledge long press
+  const handleKnowledgeTouchStart = (e: React.TouchEvent, file: KnowledgeFile) => {
+    if (!isMobile) return;
+    const touch = e.touches[0];
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenuKnowledge(file);
+      setContextMenuPosition({ x: touch.clientX, y: touch.clientY });
+    }, 500);
+  };
+
+  // Prompt long press
+  const handlePromptTouchStart = (e: React.TouchEvent, prompt: PromptPreset) => {
+    if (!isMobile) return;
+    const touch = e.touches[0];
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenuPrompt(prompt);
+      setContextMenuPosition({ x: touch.clientX, y: touch.clientY });
+    }, 500);
+  };
+
+  const handlePinSession = (session: ChatSession) => {
+    console.log('Pin session:', session.id);
+    setContextMenuSession(null);
+  };
+
+  const handlePinKnowledge = (file: KnowledgeFile) => {
+    console.log('Pin knowledge:', file.id);
+    setContextMenuKnowledge(null);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const TOTAL_VIEWS = 3; // Reduced views
@@ -273,6 +342,9 @@ const Sidebar: React.FC<Props> = ({
                                         onSwitchSession(session.id);
                                         if (window.innerWidth < 768) onClose();
                                     }}
+                                    onTouchStart={(e) => handleTouchStart(e, session)}
+                                    onTouchEnd={handleTouchEnd}
+                                    onTouchMove={handleTouchEnd}
                                     className={`group relative flex items-start justify-between p-3.5 rounded-xl cursor-pointer transition-all border 
                                         ${currentSessionId === session.id 
                                             ? 'bg-white dark:bg-[#212121] border-gray-400/50 shadow-md ring-1 ring-gray-400/20' 
@@ -291,7 +363,8 @@ const Sidebar: React.FC<Props> = ({
                                             {new Date(session.timestamp).toLocaleString(undefined, {month:'numeric', day:'numeric', hour:'numeric', minute:'numeric'})}
                                         </div>
                                     </div>
-                                    <div className="absolute right-2 top-3 flex items-center gap-1 transition-all z-10 bg-white dark:bg-[#212121] rounded-lg shadow-sm border border-gray-100 dark:border-[#333] md:opacity-0 md:group-hover:opacity-100 opacity-100">
+                                    {/* Desktop: show on hover, Mobile: hidden (use long press menu) */}
+                                    <div className="absolute right-2 top-3 flex items-center gap-1 transition-all z-10 bg-white dark:bg-[#212121] rounded-lg shadow-sm border border-gray-100 dark:border-[#333] md:opacity-0 md:group-hover:opacity-100 opacity-0">
                                         <button 
                                             type="button"
                                             onClick={(e) => handleExportMarkdown(e, session)}
@@ -355,66 +428,78 @@ const Sidebar: React.FC<Props> = ({
                                           ? (file.leftEnabled || file.rightEnabled)
                                           : file.isActive;
                                       return (
-                                      <div key={file.id} className={`p-3 bg-white dark:bg-[#212121] border rounded-xl shadow-sm transition-all h-fit ${isHighlighted ? 'border-gray-100 dark:border-[#333]' : 'border-gray-200 dark:border-[#2a2a2a] opacity-70'}`}>
+                                      <div 
+                                          key={file.id} 
+                                          onClick={() => !isSplitScreen && isMobile && onToggleKnowledge(file.id)}
+                                          onTouchStart={(e) => handleKnowledgeTouchStart(e, file)}
+                                          onTouchEnd={handleTouchEnd}
+                                          onTouchMove={handleTouchEnd}
+                                          className={`p-3 bg-white dark:bg-[#212121] border rounded-xl shadow-sm transition-all h-fit ${isHighlighted ? 'border-gray-100 dark:border-[#333]' : 'border-gray-200 dark:border-[#2a2a2a] opacity-70'} ${isMobile && !isSplitScreen ? 'cursor-pointer' : ''}`}
+                                      >
                                           <div className="flex items-start justify-between mb-3">
                                               <div className="flex items-center gap-2 overflow-hidden">
                                                   <div 
-                                                      onClick={() => !isSplitScreen && onToggleKnowledge(file.id)}
-                                                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform hover:scale-110 ${isHighlighted ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'} ${!isSplitScreen ? 'cursor-pointer' : ''}`}
+                                                      onClick={() => !isSplitScreen && !isMobile && onToggleKnowledge(file.id)}
+                                                      className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform ${!isSplitScreen && !isMobile ? 'cursor-pointer hover:scale-110' : ''} ${isHighlighted ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}
                                                   >
                                                       <FileTextIcon className={`w-4 h-4 ${isHighlighted ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} />
                                                   </div>
                                                   <span 
-                                                      onClick={() => !isSplitScreen && onToggleKnowledge(file.id)}
-                                                      className={`text-sm font-medium truncate ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-600'}`} 
+                                                      onClick={() => !isSplitScreen && !isMobile && onToggleKnowledge(file.id)}
+                                                      className={`text-sm font-medium truncate ${!isSplitScreen && !isMobile ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-600'}`} 
                                                       title={file.name}
                                                   >{file.name}</span>
                                               </div>
-                                              <button onClick={(e) => { e.stopPropagation(); onDeleteKnowledge(file.id); }} className="text-gray-300 hover:text-red-500 transition-colors"><XIcon className="w-3.5 h-3.5" /></button>
-                                          </div>
-                                          {/* Toggle Section - Different UI for split screen vs single window */}
-                                          <div className="border-t border-gray-50 dark:border-gray-800 pt-2 mt-1">
-                                              {!isSplitScreen ? (
-                                                  /* Single Window Mode: Simple on/off toggle */
-                                                  <div className="flex gap-1">
-                                                      <button
-                                                          onClick={(e) => { e.stopPropagation(); onToggleKnowledge(file.id); }}
-                                                          className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${file.isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                      >
-                                                          启用
-                                                      </button>
-                                                      <button
-                                                          onClick={(e) => { e.stopPropagation(); onToggleKnowledge(file.id); }}
-                                                          className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${!file.isActive ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                      >
-                                                          关闭
-                                                      </button>
-                                                  </div>
-                                              ) : (
-                                                  /* Split Screen Mode: Left/Right toggles */
-                                                  <div className="flex items-center gap-2">
-                                                      <span className="text-[10px] text-gray-400 flex-shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
-                                                      <div className="flex gap-2 flex-1">
-                                                          <button
-                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide?.(file.id, 'left'); }}
-                                                              className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.leftEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                              title="左侧/上方启用"
-                                                          >
-                                                              <span className="hidden md:inline">左</span>
-                                                              <span className="md:hidden">上</span>
-                                                          </button>
-                                                          <button
-                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide?.(file.id, 'right'); }}
-                                                              className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.rightEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                              title="右侧/下方启用"
-                                                          >
-                                                              <span className="hidden md:inline">右</span>
-                                                              <span className="md:hidden">下</span>
-                                                          </button>
-                                                      </div>
-                                                  </div>
+                                              {/* Desktop only: X button */}
+                                              {!isMobile && (
+                                                  <button onClick={(e) => { e.stopPropagation(); onDeleteKnowledge(file.id); }} className="text-gray-300 hover:text-red-500 transition-colors"><XIcon className="w-3.5 h-3.5" /></button>
                                               )}
                                           </div>
+                                          {/* Toggle Section - Hidden on mobile single window mode */}
+                                          {!(isMobile && !isSplitScreen) && (
+                                              <div className="border-t border-gray-50 dark:border-gray-800 pt-2 mt-1">
+                                                  {!isSplitScreen ? (
+                                                      /* Single Window Mode: Simple on/off toggle */
+                                                      <div className="flex gap-1">
+                                                          <button
+                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledge(file.id); }}
+                                                              className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${file.isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                          >
+                                                              启用
+                                                          </button>
+                                                          <button
+                                                              onClick={(e) => { e.stopPropagation(); onToggleKnowledge(file.id); }}
+                                                              className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${!file.isActive ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                          >
+                                                              关闭
+                                                          </button>
+                                                      </div>
+                                                  ) : (
+                                                      /* Split Screen Mode: Left/Right toggles */
+                                                      <div className="flex items-center gap-2">
+                                                          <span className="text-[10px] text-gray-400 flex-shrink-0">{(file.size / 1024).toFixed(1)} KB</span>
+                                                          <div className="flex gap-2 flex-1">
+                                                              <button
+                                                                  onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide?.(file.id, 'left'); }}
+                                                                  className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.leftEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                  title="左侧/上方启用"
+                                                              >
+                                                                  <span className="hidden md:inline">左</span>
+                                                                  <span className="md:hidden">上</span>
+                                                              </button>
+                                                              <button
+                                                                  onClick={(e) => { e.stopPropagation(); onToggleKnowledgeSide?.(file.id, 'right'); }}
+                                                                  className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${file.rightEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                  title="右侧/下方启用"
+                                                              >
+                                                                  <span className="hidden md:inline">右</span>
+                                                                  <span className="md:hidden">下</span>
+                                                              </button>
+                                                          </div>
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          )}
                                       </div>
                                       );
                                   })
@@ -449,92 +534,95 @@ const Sidebar: React.FC<Props> = ({
                                        : prompt.isActive !== false;
                                    return (
                                    <div 
-                                       key={prompt.id} 
-                                       className={`relative flex flex-col p-4 bg-white dark:bg-[#212121] border rounded-xl shadow-sm transition-all ${isHighlighted ? 'border-gray-100 dark:border-[#333]' : 'border-gray-200 dark:border-[#2a2a2a] opacity-60'}`}
+                                       key={prompt.id}
+                                       onClick={() => !isSplitScreen && isMobile && onTogglePrompt?.(prompt.id)}
+                                       onTouchStart={(e) => handlePromptTouchStart(e, prompt)}
+                                       onTouchEnd={handleTouchEnd}
+                                       onTouchMove={handleTouchEnd}
+                                       className={`p-3 bg-white dark:bg-[#212121] border rounded-xl shadow-sm transition-all ${isHighlighted ? 'border-gray-100 dark:border-[#333]' : 'border-gray-200 dark:border-[#2a2a2a] opacity-60'} ${isMobile && !isSplitScreen ? 'cursor-pointer' : ''}`}
                                    >
-                                       {/* Header with Icon, Name, and Actions */}
-                                       <div className="flex items-center gap-3 mb-2">
-                                           <div 
-                                               onClick={() => !isSplitScreen && onTogglePrompt?.(prompt.id)}
-                                               className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${!isSplitScreen ? 'cursor-pointer hover:scale-110' : ''} ${isHighlighted ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'}`}
-                                           >
-                                                <BotIcon className="w-4 h-4" />
-                                           </div>
-                                           <span 
-                                               onClick={() => !isSplitScreen && onTogglePrompt?.(prompt.id)}
-                                               className={`text-sm font-bold truncate flex-1 ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-gray-600'}`}
-                                           >{prompt.name}</span>
-                                           
-                                           {/* Action Buttons - Always visible */}
-                                           <div className="flex items-center gap-1">
-                                               <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleEditRole(prompt); }}
-                                                    className="p-1.5 text-gray-400 hover:text-blue-500 transition-all rounded-md"
-                                                    title="编辑角色"
+                                       <div className="flex items-start justify-between mb-1">
+                                           <div className="flex items-center gap-2 overflow-hidden">
+                                               <div 
+                                                   onClick={() => !isSplitScreen && !isMobile && onTogglePrompt?.(prompt.id)}
+                                                   className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform ${!isSplitScreen && !isMobile ? 'cursor-pointer hover:scale-110' : ''} ${isHighlighted ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}
                                                >
-                                                   <EditIcon className="w-3.5 h-3.5" />
-                                               </button>
-                                               <button 
-                                                    onClick={(e) => { e.stopPropagation(); onDeleteCustomPrompt(prompt.id); }}
-                                                    className="p-1.5 text-gray-400 hover:text-red-500 transition-all rounded-md"
-                                                    title="删除角色"
-                                               >
-                                                   <TrashIcon className="w-3.5 h-3.5" />
-                                               </button>
-                                           </div>
-                                       </div>
-                                       
-                                       {/* Description */}
-                                       <p 
-                                           onClick={() => !isSplitScreen && onTogglePrompt?.(prompt.id)}
-                                           className={`text-xs line-clamp-3 leading-relaxed mb-2 pr-6 ${!isSplitScreen ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}
-                                       >
-                                           {prompt.description}
-                                       </p>
-                                       
-                                       {/* Toggle Section - Different UI for split screen vs single window */}
-                                       <div className="pt-2 border-t border-gray-100 dark:border-[#2a2a2a]">
-                                           {!isSplitScreen ? (
-                                               /* Single Window Mode: Simple on/off toggle */
-                                               <div className="flex gap-1">
-                                                   <button
-                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt?.(prompt.id); }}
-                                                       className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive !== false ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                   >
-                                                       启用
-                                                   </button>
-                                                   <button
-                                                       onClick={(e) => { e.stopPropagation(); onTogglePrompt?.(prompt.id); }}
-                                                       className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive === false ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                   >
-                                                       关闭
-                                                   </button>
+                                                    <BotIcon className={`w-4 h-4 ${isHighlighted ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`} />
                                                </div>
-                                           ) : (
-                                               /* Split Screen Mode: Left/Right toggles */
-                                               <div className="flex items-center gap-2">
-                                                   <span className="text-[10px] text-gray-400 flex-shrink-0">应用至:</span>
-                                                   <div className="flex gap-2 flex-1">
-                                                       <button
-                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide?.(prompt.id, 'left'); }}
-                                                           className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${prompt.leftEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                           title="左侧/上方启用"
-                                                       >
-                                                           <span className="hidden md:inline">左</span>
-                                                           <span className="md:hidden">上</span>
-                                                       </button>
-                                                       <button
-                                                           onClick={(e) => { e.stopPropagation(); onTogglePromptSide?.(prompt.id, 'right'); }}
-                                                           className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-all ${prompt.rightEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                           title="右侧/下方启用"
-                                                       >
-                                                           <span className="hidden md:inline">右</span>
-                                                           <span className="md:hidden">下</span>
-                                                       </button>
-                                                   </div>
+                                               <div className="flex-1 min-w-0">
+                                                   <span 
+                                                       onClick={() => !isSplitScreen && !isMobile && onTogglePrompt?.(prompt.id)}
+                                                       className={`text-sm font-medium truncate block ${!isSplitScreen && !isMobile ? 'cursor-pointer' : ''} ${isHighlighted ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-600'}`}
+                                                   >{prompt.name}</span>
+                                                   <p 
+                                                       className={`text-[10px] text-gray-400 dark:text-gray-500 truncate mt-0.5`}
+                                                   >
+                                                       {prompt.description}
+                                                   </p>
+                                               </div>
+                                           </div>
+                                           {/* Desktop only: Action buttons */}
+                                           {!isMobile && (
+                                               <div className="flex items-center gap-1">
+                                                   <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleEditRole(prompt); }}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-500 transition-all rounded-md"
+                                                        title="编辑角色"
+                                                   >
+                                                       <EditIcon className="w-3.5 h-3.5" />
+                                                   </button>
+                                                   <button 
+                                                        onClick={(e) => { e.stopPropagation(); onDeleteCustomPrompt(prompt.id); }}
+                                                        className="p-1.5 text-gray-400 hover:text-red-500 transition-all rounded-md"
+                                                        title="删除角色"
+                                                   >
+                                                       <TrashIcon className="w-3.5 h-3.5" />
+                                                   </button>
                                                </div>
                                            )}
                                        </div>
+                                       
+                                       {/* Toggle Section - Hidden on mobile single window mode */}
+                                       {!(isMobile && !isSplitScreen) && (
+                                           <div className="border-t border-gray-50 dark:border-gray-800 pt-2 mt-1">
+                                               {!isSplitScreen ? (
+                                                   <div className="flex gap-1">
+                                                       <button
+                                                           onClick={(e) => { e.stopPropagation(); onTogglePrompt?.(prompt.id); }}
+                                                           className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive !== false ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                       >
+                                                           启用
+                                                       </button>
+                                                       <button
+                                                           onClick={(e) => { e.stopPropagation(); onTogglePrompt?.(prompt.id); }}
+                                                           className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.isActive === false ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                       >
+                                                           关闭
+                                                       </button>
+                                                   </div>
+                                               ) : (
+                                                   <div className="flex items-center gap-2">
+                                                       <span className="text-[10px] text-gray-400 flex-shrink-0">应用至:</span>
+                                                       <div className="flex gap-2 flex-1">
+                                                           <button
+                                                               onClick={(e) => { e.stopPropagation(); onTogglePromptSide?.(prompt.id, 'left'); }}
+                                                               className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.leftEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                           >
+                                                               <span className="hidden md:inline">左</span>
+                                                               <span className="md:hidden">上</span>
+                                                           </button>
+                                                           <button
+                                                               onClick={(e) => { e.stopPropagation(); onTogglePromptSide?.(prompt.id, 'right'); }}
+                                                               className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-medium transition-all ${prompt.rightEnabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                           >
+                                                               <span className="hidden md:inline">右</span>
+                                                               <span className="md:hidden">下</span>
+                                                           </button>
+                                                       </div>
+                                                   </div>
+                                               )}
+                                           </div>
+                                       )}
                                    </div>
                                    );
                                })}
@@ -545,7 +633,7 @@ const Sidebar: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121] flex flex-col gap-3 flex-shrink-0">
+        <div className="p-4 md:border-t border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121] flex flex-col gap-3 flex-shrink-0">
              
              {/* Dynamic Top Button in Footer: Clear History only on Page 1 */}
              {currentView === 0 ? (
@@ -556,7 +644,7 @@ const Sidebar: React.FC<Props> = ({
                         onClearAllHistory();
                     }}
                     disabled={sessions.length === 0}
-                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium transition-all duration-200 ${
+                    className={`hidden md:flex w-full items-center justify-center gap-2 px-3 py-2 text-xs font-medium transition-all duration-200 ${
                         sessions.length === 0 
                         ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
                         : 'text-red-600 hover:text-red-700 dark:text-red-400'
@@ -566,22 +654,25 @@ const Sidebar: React.FC<Props> = ({
                     清除所有历史
                  </button>
              ) : (
-                 <div className="h-8 w-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs font-medium">
-                     {/* Placeholder or Info text */}
+                 <div className="hidden md:flex h-8 w-full items-center justify-center text-gray-400 dark:text-gray-500 text-xs font-medium">
                      {isFullWidth ? "已展开更多列" : "点击右上角展开更多列"}
                  </div> 
              )}
 
              {/* View Switcher Controls */}
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-[#2a2a2a]">
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-[#2a2a2a] md:border-t-0">
                 <button 
                    type="button"
                    onClick={handlePrevView}
                    disabled={currentView === 0}
                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all ${currentView === 0 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'}`}
                 >
-                   <ChevronLeftIcon className="w-3.5 h-3.5" />
-                   上一页
+                   <span className="md:hidden flex items-center">
+                       <ChevronLeftIcon className="w-5 h-5" />
+                       <ChevronLeftIcon className="w-3 h-3 -ml-2" />
+                   </span>
+                   <ChevronLeftIcon className="w-3.5 h-3.5 hidden md:block" />
+                   <span className="hidden md:inline">上一页</span>
                 </button>
                 
                 <div className="flex gap-1.5">
@@ -596,8 +687,12 @@ const Sidebar: React.FC<Props> = ({
                    disabled={currentView === TOTAL_VIEWS - 1}
                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-all ${currentView === TOTAL_VIEWS - 1 ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white'}`}
                 >
-                   下一页
-                   <ChevronRightIcon className="w-3.5 h-3.5" />
+                   <span className="hidden md:inline">下一页</span>
+                   <ChevronRightIcon className="w-3.5 h-3.5 hidden md:block" />
+                   <span className="md:hidden flex items-center">
+                       <ChevronRightIcon className="w-3 h-3 -mr-2" />
+                       <ChevronRightIcon className="w-5 h-5" />
+                   </span>
                 </button>
             </div>
         </div>
@@ -733,6 +828,133 @@ const Sidebar: React.FC<Props> = ({
                           更新角色
                       </button>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* Mobile Context Menu for Session */}
+      {contextMenuSession && (
+          <div 
+              className="fixed inset-0 z-[100]" 
+              onClick={handleCloseContextMenu}
+              onTouchStart={handleCloseContextMenu}
+          >
+              <div 
+                  className="absolute bg-white dark:bg-[#212121] rounded-xl shadow-2xl border border-gray-200 dark:border-[#333] py-2 min-w-[140px]"
+                  style={{
+                      left: Math.min(contextMenuPosition.x, window.innerWidth - 160),
+                      top: Math.min(contextMenuPosition.y, window.innerHeight - 200)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+              >
+                  <button
+                      onClick={() => {
+                          handlePinSession(contextMenuSession);
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
+                  >
+                      <PinIcon className="w-4 h-4" />
+                      置顶会话
+                  </button>
+                  <button
+                      onClick={(e) => {
+                          handleExportMarkdown(e, contextMenuSession);
+                          handleCloseContextMenu();
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
+                  >
+                      <DownloadIcon className="w-4 h-4" />
+                      导出 Markdown
+                  </button>
+                  <div className="border-t border-gray-200 dark:border-[#333] my-1"></div>
+                  <button
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteSession(e, contextMenuSession.id);
+                          handleCloseContextMenu();
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
+                  >
+                      <TrashIcon className="w-4 h-4" />
+                      删除会话
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {/* Mobile Context Menu for Knowledge */}
+      {contextMenuKnowledge && (
+          <div 
+              className="fixed inset-0 z-[100]" 
+              onClick={handleCloseContextMenu}
+              onTouchStart={handleCloseContextMenu}
+          >
+              <div 
+                  className="absolute bg-white dark:bg-[#212121] rounded-xl shadow-2xl border border-gray-200 dark:border-[#333] py-2 min-w-[140px]"
+                  style={{
+                      left: Math.min(contextMenuPosition.x, window.innerWidth - 160),
+                      top: Math.min(contextMenuPosition.y, window.innerHeight - 150)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+              >
+                  <button
+                      onClick={() => handlePinKnowledge(contextMenuKnowledge)}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
+                  >
+                      <PinIcon className="w-4 h-4" />
+                      置顶
+                  </button>
+                  <div className="border-t border-gray-200 dark:border-[#333] my-1"></div>
+                  <button
+                      onClick={() => {
+                          onDeleteKnowledge(contextMenuKnowledge.id);
+                          handleCloseContextMenu();
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
+                  >
+                      <TrashIcon className="w-4 h-4" />
+                      删除
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {/* Mobile Context Menu for Prompt */}
+      {contextMenuPrompt && (
+          <div 
+              className="fixed inset-0 z-[100]" 
+              onClick={handleCloseContextMenu}
+              onTouchStart={handleCloseContextMenu}
+          >
+              <div 
+                  className="absolute bg-white dark:bg-[#212121] rounded-xl shadow-2xl border border-gray-200 dark:border-[#333] py-2 min-w-[140px]"
+                  style={{
+                      left: Math.min(contextMenuPosition.x, window.innerWidth - 160),
+                      top: Math.min(contextMenuPosition.y, window.innerHeight - 150)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+              >
+                  <button
+                      onClick={() => {
+                          handleEditRole(contextMenuPrompt);
+                          handleCloseContextMenu();
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
+                  >
+                      <EditIcon className="w-4 h-4" />
+                      编辑
+                  </button>
+                  <div className="border-t border-gray-200 dark:border-[#333] my-1"></div>
+                  <button
+                      onClick={() => {
+                          onDeleteCustomPrompt(contextMenuPrompt.id);
+                          handleCloseContextMenu();
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
+                  >
+                      <TrashIcon className="w-4 h-4" />
+                      删除
+                  </button>
               </div>
           </div>
       )}

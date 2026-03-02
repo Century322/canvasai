@@ -521,7 +521,7 @@ const InputArea: React.FC<Props> = ({
                       onChange={(e) => currentSetText(e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, side)}
                       placeholder={placeholder}
-                      className="w-full bg-transparent border-none focus:ring-0 outline-none ring-0 resize-none py-3 px-3 text-gray-800 dark:text-gray-100 placeholder-gray-400 text-[16px] leading-relaxed min-h-[48px] max-h-[200px] custom-scrollbar mb-10 flex-1"
+                      className="w-full bg-transparent border-none focus:ring-0 outline-none ring-0 resize-none py-2 px-3 text-gray-800 dark:text-gray-100 placeholder-gray-400 text-[16px] leading-relaxed min-h-[36px] max-h-[200px] custom-scrollbar mb-10 flex-1"
                       rows={1}
                   />
 
@@ -579,7 +579,7 @@ const InputArea: React.FC<Props> = ({
   };
 
   return (
-    <div className="w-full bg-white dark:bg-[#212121] pt-8 pb-2 px-2 sm:px-4 md:px-0 z-30 flex-shrink-0 flex flex-col gap-2 border-t border-transparent mt-auto">
+    <div className={`w-full bg-white dark:bg-[#212121] pt-2 pb-2 sm:px-4 md:px-0 md:pt-8 md:pb-2 z-30 flex-shrink-0 flex flex-col gap-2 border-t border-transparent mt-auto ${isSplitInput && isSplitScreen ? 'px-2' : 'pl-7 pr-3'}`}>
         <div className={`mx-auto w-full ${isSplitInput && isSplitScreen ? 'max-w-full md:max-w-[95vw] lg:max-w-[90vw]' : 'max-w-3xl'}`}>
             
             <div className={`flex items-end justify-center gap-2 md:gap-3 transition-all duration-500 ease-in-out relative ${isSplitInput && isSplitScreen ? 'w-full px-0 md:px-4' : ''}`}>

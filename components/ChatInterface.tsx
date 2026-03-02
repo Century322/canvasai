@@ -217,7 +217,7 @@ const MessageItemRaw: React.FC<{
                     </div>
                 ) : (
                     <div className="inline-block max-w-full">
-                        <div className={`bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[15px] leading-relaxed break-words whitespace-pre-wrap overflow-hidden`}>
+                        <div className={`bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[13px] md:text-[15px] leading-relaxed break-words whitespace-pre-wrap overflow-hidden`}>
                             {processMessageContent(message.content)}
                         </div>
                     </div>
@@ -288,7 +288,7 @@ const MessageItemRaw: React.FC<{
 
                 {mainContent && (
                     <div className="inline-block max-w-full md:max-w-[90%]">
-                        <div className="bg-[#f4f4f4] dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 px-5 py-2.5 rounded-3xl text-[15px] leading-relaxed">
+                        <div className="md:bg-[#f4f4f4] md:dark:bg-[#2f2f2f] text-gray-800 dark:text-gray-100 md:px-5 md:py-2.5 md:rounded-3xl text-[13px] md:text-[15px] leading-relaxed">
                             <div className="markdown-body">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm, remarkMath]}

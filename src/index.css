@@ -40,6 +40,27 @@ body {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Hide scrollbar on mobile */
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+  
+  .custom-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overflow-y: overlay;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
 /* Animation for Right Sidebar Toggle */
 @keyframes bounce-x {
   0%, 100% { transform: translateX(0); }
@@ -67,7 +88,13 @@ body {
 /* Markdown Tweaks */
 .markdown-body {
   line-height: 1.6;
-  font-size: 1rem;
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 768px) {
+  .markdown-body {
+    font-size: 1rem;
+  }
 }
 
 .markdown-body p { margin-bottom: 0.75rem; }

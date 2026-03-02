@@ -63,7 +63,6 @@ const ProviderBadge: React.FC<{ provider: ModelProvider }> = ({ provider }) => {
         case 'openai': return <span className="flex items-center gap-1 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"><OpenAIIcon className="w-3 h-3"/> OpenAI</span>;
         case 'anthropic': return <span className="flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full"><AnthropicIcon className="w-3 h-3"/> Claude</span>;
         case 'deepseek': return <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">DeepSeek</span>;
-        case 'siliconflow': return <span className="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">SiliconFlow</span>;
         case 'zhipu': return <span className="flex items-center gap-1 text-[10px] bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">GLM</span>;
         case 'custom': return <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full"><ApiIcon className="w-3 h-3"/> Custom</span>;
         default: return <span className="flex items-center gap-1 text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full uppercase">{provider}</span>;
@@ -139,17 +138,22 @@ const RightSidebar: React.FC<Props> = ({
           }, 300); 
           return () => clearTimeout(timer);
       } else {
-          // 当侧边栏打开时，强制展开 keys 部分
-          // 无论 targetSectionTrigger 是什么，确保用户能看到密钥配置界面
-          setOpenSections(prev => ({
-              ...prev,
-              'keys': true
-          }));
+          const hasKeys = storedKeys && storedKeys.length > 0;
+          const isMobileView = window.innerWidth < 768;
+          
+          if (isMobileView && hasKeys) {
+              setOpenSections({ 'keys': false, 'model': false, 'app': false });
+          } else if (!hasKeys) {
+              setOpenSections(prev => ({
+                  ...prev,
+                  'keys': true
+              }));
+          }
       }
-  }, [isOpen]);
+  }, [isOpen, storedKeys]);
 
   const [inputKey, setInputKey] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('openrouter');
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('custom');
   const [customBaseUrl, setCustomBaseUrl] = useState('');
   const [showBaseUrlInput, setShowBaseUrlInput] = useState(false);
   const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
@@ -162,7 +166,7 @@ const RightSidebar: React.FC<Props> = ({
       const providerDef = API_PROVIDERS.find(p => p.id === selectedProvider);
       if (providerDef) {
           setCustomBaseUrl(providerDef.baseUrl);
-          setShowBaseUrlInput(selectedProvider === 'custom' || selectedProvider === 'openrouter');
+          setShowBaseUrlInput(selectedProvider === 'custom');
       }
   }, [selectedProvider]);
 
