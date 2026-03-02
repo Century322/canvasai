@@ -571,10 +571,24 @@ const ChatInterface: React.FC<Props> = ({
       };
   }, []);
 
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+      const handleResize = () => {
+          if (window.innerWidth < 768) {
+              setIsKeyboardOpen(window.innerHeight < window.screen.height * 0.75);
+          } else {
+              setIsKeyboardOpen(false);
+          }
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (messages.length === 0) {
       return (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center opacity-20 select-none p-4">
-            <BotIcon className="w-24 h-24 mb-4 text-gray-400" />
+            <BotIcon className={`${isKeyboardOpen ? 'w-16 h-16' : 'w-24 h-24'} mb-4 text-gray-400 transition-all duration-300`} />
             <p className="text-lg font-medium text-gray-500">
                 有什么可以帮你的吗？
             </p>

@@ -265,7 +265,7 @@ const Sidebar: React.FC<Props> = ({
       <div className={`fixed top-0 left-0 h-full ${widthClass} bg-white dark:bg-[#212121] border-r border-gray-200 dark:border-[#2f2f2f] z-50 transform transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col shadow-2xl md:shadow-xl`}>
         
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121] flex-shrink-0 flex items-center justify-between">
+        <div className="p-4 bg-white dark:bg-[#212121] flex-shrink-0 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
                  <div className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight flex-shrink-0">
                     Canvas
@@ -633,7 +633,7 @@ const Sidebar: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:border-t border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121] flex flex-col gap-3 flex-shrink-0">
+        <div className="p-4 bg-white dark:bg-[#212121] flex flex-col gap-3 flex-shrink-0">
              
              {/* Dynamic Top Button in Footer: Clear History only on Page 1 */}
              {currentView === 0 ? (
@@ -660,7 +660,7 @@ const Sidebar: React.FC<Props> = ({
              )}
 
              {/* View Switcher Controls */}
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-[#2a2a2a] md:border-t-0">
+            <div className="flex items-center justify-between gap-3 pt-2">
                 <button 
                    type="button"
                    onClick={handlePrevView}

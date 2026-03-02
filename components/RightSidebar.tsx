@@ -250,7 +250,7 @@ const RightSidebar: React.FC<Props> = ({
 
         <div className={`fixed inset-y-0 right-0 z-50 w-[340px] max-w-[85vw] bg-white dark:bg-[#212121] border-l border-gray-200 dark:border-[#2f2f2f] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2f2f2f] bg-white dark:bg-[#212121]">
+        <div className="flex items-center justify-between p-4 bg-white dark:bg-[#212121]">
             <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
                 配置与服务
             </h2>

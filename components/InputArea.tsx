@@ -100,26 +100,6 @@ const InputArea: React.FC<Props> = ({
   
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Optimized Token Estimator
-  const estimateTokens = (str: string) => {
-      if (!str) return 0;
-      let total = 0;
-      for (let i = 0; i < str.length; i++) {
-          const code = str.charCodeAt(i);
-          // High precision weighting
-          if (code <= 128) {
-              total += 0.25; // Basic Latin (avg ~4 chars/token)
-          } else if (code > 128 && code < 2048) {
-              total += 0.5; // Extended Latin/Symbols
-          } else {
-              // CJK characters are often 0.6 - 1.5 tokens depending on the tokenizer
-              // Averaging to 1.1 for safety against limits
-              total += 1.1; 
-          }
-      }
-      return Math.ceil(total);
-  };
-
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -536,11 +516,6 @@ const InputArea: React.FC<Props> = ({
                            </div>
                        )}
                   </div>
-              </div>
-
-              {/* Token Count Row - Displayed below the module using current space */}
-              <div className="h-4 min-h-[16px] text-[10px] text-gray-400 font-mono px-3 mt-1 flex justify-end items-end">
-                   {estimateTokens(currentText) > 0 && <span>~{estimateTokens(currentText)} tokens</span>}
               </div>
           </div>
       );

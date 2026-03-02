@@ -476,7 +476,7 @@ const AppContent: React.FC = () => {
         onClick={() => setIsRightSidebarOpen(false)}
         className={`flex-1 flex flex-col h-full relative transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-[280px]' : ''} max-w-full`}
       >
-        <header className="relative flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-[#212121]/90 backdrop-blur-md flex-shrink-0 z-20 border-b border-gray-100 dark:border-[#2f2f2f]">
+        <header className="fixed top-0 left-0 right-0 md:left-auto flex items-center justify-between px-4 py-3 bg-white/90 dark:bg-[#212121]/90 backdrop-blur-md flex-shrink-0 z-20">
           <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 -ml-2 text-gray-500 hover:text-gray-800 dark:hover:text-white transition-colors shrink-0">
               <PanelLeftIcon className="w-5 h-5" />
@@ -544,9 +544,9 @@ const AppContent: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative w-full min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative w-full min-h-0 pt-12 md:pt-0">
           <div 
-            className={`flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isSplitScreen ? 'border-b md:border-b-0 md:border-r border-gray-200 dark:border-[#333]' : ''}`}
+            className={`flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isSplitScreen ? 'md:border-r border-gray-200 dark:border-[#333]' : ''}`}
             style={{ 
               flex: isSplitScreen 
                 ? (expandedPanel === 'right' ? 0 : (expandedPanel === 'left' ? 2 : 1))
