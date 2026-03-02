@@ -333,18 +333,6 @@ export class GeminiService {
     
     // 基于提供商的特殊判断
     switch (provider) {
-        case 'openrouter':
-            // OpenRouter 上的大多数高级模型都是付费的
-            if (lowerId.includes('anthropic') || lowerId.includes('google') || lowerId.includes('openai')) {
-                if (lowerId.includes('flash') || lowerId.includes('mini') || lowerId.includes('base')) {
-                    isPaid = false;
-                    paymentTier = 'free';
-                } else {
-                    isPaid = true;
-                    paymentTier = 'paid';
-                }
-            }
-            break;
         case 'openai':
             if (lowerId.includes('gpt-3.5-turbo') || lowerId.includes('gpt-4o-mini')) {
                 isPaid = false;

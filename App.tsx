@@ -305,7 +305,7 @@ const AppContent: React.FC = () => {
     }
   }, [isRightSidebarOpen, isSidebarOpen]);
 
-  const handleDeleteSession = useCallback(async (e: React.MouseEvent, id: string) => {
+  const handleDeleteSession = useCallback(async (e: React.MouseEvent | React.TouchEvent, id: string) => {
     e.stopPropagation();
     
     if (id === currentSessionId) {

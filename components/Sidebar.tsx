@@ -15,7 +15,7 @@ interface Props {
   currentSessionId: string | null;
   onNewChat: () => void;
   onSwitchSession: (id: string) => void;
-  onDeleteSession: (e: React.MouseEvent, id: string) => void;
+  onDeleteSession: (e: React.MouseEvent | React.TouchEvent, id: string) => void;
   onClearAllHistory: () => void;
   isNewChatDisabled?: boolean; // 当当前已经是空的新会话时禁用
   
@@ -222,7 +222,7 @@ const Sidebar: React.FC<Props> = ({
       setIsEditorOpen(false);
   };
 
-  const handleExportMarkdown = (e: React.MouseEvent, session: ChatSession) => {
+  const handleExportMarkdown = (e: React.MouseEvent | React.TouchEvent, session: ChatSession) => {
       e.stopPropagation();
       let mdContent = `# ${session.title}\n\n`;
       session.messages.forEach(msg => {
@@ -846,9 +846,14 @@ const Sidebar: React.FC<Props> = ({
                       top: Math.min(contextMenuPosition.y, window.innerHeight - 200)
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
               >
                   <button
                       onClick={() => {
+                          handlePinSession(contextMenuSession);
+                      }}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
                           handlePinSession(contextMenuSession);
                       }}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
@@ -861,6 +866,11 @@ const Sidebar: React.FC<Props> = ({
                           handleExportMarkdown(e, contextMenuSession);
                           handleCloseContextMenu();
                       }}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
+                          handleExportMarkdown(e, contextMenuSession);
+                          handleCloseContextMenu();
+                      }}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
                   >
                       <DownloadIcon className="w-4 h-4" />
@@ -870,6 +880,11 @@ const Sidebar: React.FC<Props> = ({
                   <button
                       onClick={(e) => {
                           e.stopPropagation();
+                          onDeleteSession(e, contextMenuSession.id);
+                          handleCloseContextMenu();
+                      }}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
                           onDeleteSession(e, contextMenuSession.id);
                           handleCloseContextMenu();
                       }}
@@ -896,9 +911,14 @@ const Sidebar: React.FC<Props> = ({
                       top: Math.min(contextMenuPosition.y, window.innerHeight - 150)
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
               >
                   <button
                       onClick={() => handlePinKnowledge(contextMenuKnowledge)}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
+                          handlePinKnowledge(contextMenuKnowledge);
+                      }}
                       className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] flex items-center gap-3"
                   >
                       <PinIcon className="w-4 h-4" />
@@ -907,6 +927,11 @@ const Sidebar: React.FC<Props> = ({
                   <div className="border-t border-gray-200 dark:border-[#333] my-1"></div>
                   <button
                       onClick={() => {
+                          onDeleteKnowledge(contextMenuKnowledge.id);
+                          handleCloseContextMenu();
+                      }}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
                           onDeleteKnowledge(contextMenuKnowledge.id);
                           handleCloseContextMenu();
                       }}
@@ -933,9 +958,15 @@ const Sidebar: React.FC<Props> = ({
                       top: Math.min(contextMenuPosition.y, window.innerHeight - 150)
                   }}
                   onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
               >
                   <button
                       onClick={() => {
+                          handleEditRole(contextMenuPrompt);
+                          handleCloseContextMenu();
+                      }}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
                           handleEditRole(contextMenuPrompt);
                           handleCloseContextMenu();
                       }}
@@ -947,6 +978,11 @@ const Sidebar: React.FC<Props> = ({
                   <div className="border-t border-gray-200 dark:border-[#333] my-1"></div>
                   <button
                       onClick={() => {
+                          onDeleteCustomPrompt(contextMenuPrompt.id);
+                          handleCloseContextMenu();
+                      }}
+                      onTouchEnd={(e) => {
+                          e.preventDefault();
                           onDeleteCustomPrompt(contextMenuPrompt.id);
                           handleCloseContextMenu();
                       }}
